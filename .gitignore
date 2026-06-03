@@ -1,0 +1,15 @@
+node_modules
+dist
+package-lock.json
+*.local
+.env
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+.*
+!.gitignore
+!.npmignore
+*.tsbuildinfo
+**/*.js
+**/*.js.map
+**/*.d.ts
