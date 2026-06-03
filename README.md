@@ -5,7 +5,7 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 ## Preview
 
 ```
-myproject · main · Claude Sonnet 4.6 · ██████████ 100% · ████░░░░░░ 40% for 3.2/5 h · ████████░░ 78% ctx
+myproject · main · Claude Sonnet 4.6 · ██████████ 100% · ████░░░░░░ 40% for 3.2/5 h · ████████░░ 78% #
 ```
 
 ## Install
