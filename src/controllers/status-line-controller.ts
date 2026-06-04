@@ -20,7 +20,7 @@ export class StatusLineController extends Controller {
 	}
 
 	static async #readInput(): Promise<string> {
-		return await new Promise(resolve => {
+		return await new Promise((resolve) => {
 			let raw = String.empty;
 			stdin.setEncoding("utf8");
 			stdin.on("data", chunk => raw += chunk);

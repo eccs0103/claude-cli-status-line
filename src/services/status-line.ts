@@ -19,7 +19,7 @@ export class StatusLine {
 	static #RED: string = "\x1b[31m";
 	static #BLOCK: string = "█";
 	static #SHADE: string = "░";
-	static #SEPARATOR: string = ` \x1b[2m·\x1b[0m `;
+	static #SEPARATOR: string = ` \x1b[2m \x1b[0m `;
 
 	#input: StatusLineInput;
 
