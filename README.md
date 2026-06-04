@@ -2,9 +2,7 @@
 
 A Claude CLI status line command that renders an ANSI-colored status bar showing your workspace directory, git branch, active model, rate limit usage, and context window consumption.
 
-```
-myproject · main · Sonnet 4.6 · █████████░ 85% for 2.5/5 h · ██████░░░░ 62% for 1.1/7 d · █████████░ 87% #
-```
+![example](./resources/example.svg)
 
 ## Setup
 
