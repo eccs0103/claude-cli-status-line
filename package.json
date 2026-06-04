@@ -1,6 +1,6 @@
 {
 	"name": "@eccs0103/claude-cli-status-line",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Claude CLI status line command that renders workspace, git branch, model, rate limits and context window as an ANSI-colored line",
 	"type": "module",
 	"private": false,
@@ -10,19 +10,12 @@
 	"bin": {
 		"claude-cli-status-line": "dist/index.js"
 	},
-	"files": [
-		"dist/"
-	],
+	"files": [ "dist/" ],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/eccs0103/claude-cli-status-line.git"
 	},
-	"keywords": [
-		"claude",
-		"cli",
-		"status-line",
-		"ansi"
-	],
+	"keywords": [ "claude", "cli", "status-line", "ansi" ],
 	"author": "eccs0103",
 	"license": "MIT",
 	"bugs": {

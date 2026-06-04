@@ -5,13 +5,7 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 ## Preview
 
 ```
-myproject · main · Claude Sonnet 4.6 · ██████████ 100% · ████░░░░░░ 40% for 3.2/5 h · ████████░░ 78% #
-```
-
-## Install
-
-```
-npm install -g @eccs0103/claude-cli-status-line
+myproject · main · Sonnet 4.6 · █████████░ 85% for 2.5/5 h · ██████░░░░ 62% for 1.1/7 d · █████████░ 87% #
 ```
 
 ## Configure
@@ -22,7 +16,7 @@ Add to your `~/.claude/settings.json`:
 {
 	"statusLine": {
 		"type": "command",
-		"command": "claude-cli-status-line"
+		"command": "npx --yes --package=@eccs0103/claude-cli-status-line claude-cli-status-line"
 	}
 }
 ```
@@ -31,8 +25,10 @@ Or run via the Claude CLI:
 
 ```
 claude config set statusLine.type command
-claude config set statusLine.command "claude-cli-status-line"
+claude config set statusLine.command "npx --yes --package=@eccs0103/claude-cli-status-line claude-cli-status-line"
 ```
+
+No global install required — `npx` downloads and caches the package on first run.
 
 ## What it shows
 
