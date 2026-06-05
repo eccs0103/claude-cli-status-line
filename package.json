@@ -1,6 +1,6 @@
 {
 	"name": "@eccs0103/claude-cli-status-line",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Claude CLI status line command that renders workspace, git branch, model, rate limits and context window as an ANSI-colored line",
 	"type": "module",
 	"private": false,
@@ -24,6 +24,7 @@
 	"homepage": "https://github.com/eccs0103/claude-cli-status-line#readme",
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
+		"test": "npm run build && node dist/index.js < ./resources/data/status-response.json",
 		"prepublishOnly": "npm run build"
 	},
 	"dependencies": {

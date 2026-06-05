@@ -2,7 +2,7 @@
 
 A Claude CLI status line command that renders an ANSI-colored status bar showing your workspace directory, git branch, active model, rate limit usage, and context window consumption.
 
-![example](./resources/example.svg)
+![example](./resources/images/status-line-render.svg)
 
 ## Setup
 
