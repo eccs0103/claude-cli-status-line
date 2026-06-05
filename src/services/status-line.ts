@@ -62,10 +62,10 @@ export class StatusLine {
 		return `${this.#renderAvailability(available)} ${this.#DIM}#${this.#RESET}`;
 	}
 
-	static #readBranch(cwd: string): string | null {
+	static #readBranch(directory: string): string | null {
 		try {
 			const stdio: StdioOptions = ["pipe", "pipe", "pipe"];
-			return execSync(`git -C "${cwd.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio })
+			return execSync(`git -C "${directory.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio })
 				.toString()
 				.trim()
 				.insteadEmpty(null);
@@ -84,7 +84,9 @@ export class StatusLine {
 		const segments: string[] = [];
 
 		segments.push(`${StatusLine.#CYAN}${StatusLine.#BOLD}${folder ?? String.empty}${StatusLine.#RESET}`);
+
 		if (branch !== null) segments.push(`${StatusLine.#MAGENTA}${branch}${StatusLine.#RESET}`);
+
 		if (agent === null) return segments.join(StatusLine.#SEPARATOR);
 		segments.push(`${StatusLine.#BLUE}${agent}${StatusLine.#RESET}`);
 
