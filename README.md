@@ -34,13 +34,34 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 
 ## What it shows
 
+Default segment order (left to right):
+
 | Segment           | Color            | Description                                    |
 | ----------------- | ---------------- | ---------------------------------------------- |
 | Directory         | Cyan bold        | Last component of the workspace path           |
 | Branch            | Magenta          | Current git branch (omitted if not a git repo) |
 | Model             | Blue             | Active Claude model display name               |
-| 5-hour rate limit | Green/Yellow/Red | Usage bar + percentage + time to reset         |
 | 7-day rate limit  | Green/Yellow/Red | Usage bar + percentage + time to reset         |
+| 5-hour rate limit | Green/Yellow/Red | Usage bar + percentage + time to reset         |
 | Context window    | Green/Yellow/Red | Remaining context as a usage bar + percentage  |
 
 Color thresholds: green (>30% remaining), yellow (10–30%), red (≤10%).
+
+## Configuring
+
+Run the interactive config wizard in a terminal:
+
+```
+claude-cli-status-line config
+```
+
+The wizard lets you configure (all opt-in, defaults reproduce the look above):
+
+| Option         | What it changes                                        |
+| -------------- | ------------------------------------------------------ |
+| **Segments**   | Toggle each segment on/off and set their display order |
+| **Colors**     | Per-segment color for Directory, Branch, and Model     |
+| **Thresholds** | Percentage cutoffs for yellow and red coloring         |
+| **Bar**        | Width and the filled/empty block characters            |
+
+Settings are saved to `~/.claude/status-line.config.json`.

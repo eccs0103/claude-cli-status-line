@@ -28,6 +28,7 @@
 		"prepublishOnly": "npm run build"
 	},
 	"dependencies": {
+		"@clack/prompts": "^1.5.1",
 		"adaptive-extender": "^0.10.1"
 	},
 	"devDependencies": {

@@ -6,12 +6,12 @@
 		"display_name": "Sonnet 4.6"
 	},
 	"rate_limits": {
-		"five_hour": {
-			"used_percentage": 94,
-			"resets_at": 1800000000
-		},
 		"seven_day": {
 			"used_percentage": 38,
+			"resets_at": 1800000000
+		},
+		"five_hour": {
+			"used_percentage": 94,
 			"resets_at": 1800000000
 		}
 	},

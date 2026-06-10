@@ -1,0 +1,27 @@
+"use strict";
+
+import "adaptive-extender/node";
+import AsyncFileSystem from "fs/promises";
+import OperationSystem from "os";
+import path from "path";
+import { Settings } from "../models/settings.js";
+
+//#region Settings service
+export class SettingsService {
+	static #path: string = path.join(OperationSystem.homedir(), ".claude", "status-line.config.json");
+
+	async read(): Promise<Settings> {
+		try {
+			const raw = await AsyncFileSystem.readFile(SettingsService.#path, "utf8");
+			return Settings.import(JSON.parse(raw), "settings");
+		} catch {
+			return Settings.newDefault;
+		}
+	}
+
+	async write(settings: Settings): Promise<void> {
+		await AsyncFileSystem.mkdir(path.join(OperationSystem.homedir(), ".claude"), { recursive: true });
+		await AsyncFileSystem.writeFile(SettingsService.#path, JSON.stringify(Settings.export(settings), undefined, "\t"), "utf8");
+	}
+}
+//#endregion
