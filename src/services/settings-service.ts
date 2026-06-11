@@ -16,7 +16,9 @@ export class SettingsService {
 			const raw = await AsyncFileSystem.readFile(SettingsService.#path, "utf8");
 			return Settings.import(JSON.parse(raw), "settings");
 		} catch {
-			return Settings.newDefault;
+			const settings = Settings.newDefault;
+			void this.write(settings);
+			return settings;
 		}
 	}
 

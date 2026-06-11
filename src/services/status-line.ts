@@ -17,7 +17,7 @@ export class StatusLine {
 	#input: StatusLineInput;
 	#settings: Settings;
 
-	constructor(input: StatusLineInput, settings: Settings = Settings.newDefault) {
+	constructor(input: StatusLineInput, settings: Settings) {
 		this.#input = input;
 		this.#settings = settings;
 	}

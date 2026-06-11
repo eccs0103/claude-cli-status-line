@@ -2,30 +2,26 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { StatusLineInput } from "../models/status-line-input.js";
 import { SettingsService } from "../services/settings-service.js";
 import { StatusLine } from "../services/status-line.js";
+import { InputService } from "../services/input-service.js";
 
-const { stdin, stdout, stderr } = process;
+const { stdout, stderr } = process;
 
 //#region Status line controller
 export class StatusLineController extends Controller {
-	static async #readInput(): Promise<string> {
-		return await new Promise((resolve) => {
-			let raw = String.empty;
-			stdin.setEncoding("utf8");
-			stdin.on("data", chunk => raw += chunk);
-			stdin.on("end", () => resolve(raw));
-		});
-	}
+	#serviceSettings: SettingsService = new SettingsService();
+	#serviceInput: InputService = new InputService();
 
 	async run(): Promise<void> {
-		const [raw, settings] = await Promise.all([
-			StatusLineController.#readInput(),
-			new SettingsService().read(),
-		]);
-		const input = StatusLineInput.import(JSON.parse(raw), "input");
-		stdout.write(`${new StatusLine(input, settings).render()}\n`);
+		const serviceSettings = this.#serviceSettings;
+		const serviceInput = this.#serviceInput;
+
+		const settings = await serviceSettings.read();
+		const input = await serviceInput.read();
+		const output = new StatusLine(input, settings).render();
+
+		stdout.write(`${output}\n`);
 	}
 
 	async catch(error: Error): Promise<void> {
