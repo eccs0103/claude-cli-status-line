@@ -25,6 +25,7 @@
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"test": "npm run build && node dist/index.js < ./resources/data/status-response.json",
+		"configure": "npm run build && node dist/index.js config",
 		"prepublishOnly": "npm run build"
 	},
 	"dependencies": {
