@@ -8,7 +8,8 @@ import { Settings } from "../models/settings.js";
 
 //#region Settings service
 export class SettingsService {
-	static #path: string = path.join(OperationSystem.homedir(), ".claude", "status-line.config.json");
+	static #directory: string = path.join(OperationSystem.homedir(), ".claude");
+	static #path: string = path.join(SettingsService.#directory, "status-line.config.json");
 
 	async read(): Promise<Settings> {
 		try {
@@ -20,7 +21,7 @@ export class SettingsService {
 	}
 
 	async write(settings: Settings): Promise<void> {
-		await AsyncFileSystem.mkdir(path.join(OperationSystem.homedir(), ".claude"), { recursive: true });
+		await AsyncFileSystem.mkdir(SettingsService.#directory, { recursive: true });
 		await AsyncFileSystem.writeFile(SettingsService.#path, JSON.stringify(Settings.export(settings), undefined, "\t"), "utf8");
 	}
 }

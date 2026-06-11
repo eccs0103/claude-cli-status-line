@@ -3,93 +3,192 @@
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
 import { cancel, confirm, intro, isCancel, multiselect, outro, select, text } from "@clack/prompts";
-import { Bar, BranchSegment, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
+import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, type GaugeSegment, type LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { SettingsService } from "../services/settings-service.js";
 
 const { stderr, stdout } = process;
 
-//#region Config controller
-export class ConfigController extends Controller {
-	static readonly #ALL_KINDS: readonly string[] = [
-		"DirectorySegment",
-		"BranchSegment",
-		"ModelSegment",
-		"SevenDaySegment",
-		"FiveHourSegment",
-		"ContextSegment",
-	];
+//#region Configuration controller
+class CancellationError extends Error {
+}
 
-	static readonly #PALETTE: ReadonlyArray<{ value: string; label: string; }> = [
-		{ value: "cyan", label: "\x1b[36mCyan\x1b[0m" },
-		{ value: "magenta", label: "\x1b[35mMagenta\x1b[0m" },
-		{ value: "blue", label: "\x1b[34mBlue\x1b[0m" },
-		{ value: "green", label: "\x1b[32mGreen\x1b[0m" },
-		{ value: "yellow", label: "\x1b[33mYellow\x1b[0m" },
-		{ value: "red", label: "\x1b[31mRed\x1b[0m" },
-		{ value: "white", label: "White" },
-	];
+export class ConfigurationController extends Controller {
+	static #ANSI_DEFAULT: string = "\x1b[0m";
+	static #ANSI_CYAN = "\x1b[36m";
+	static #ANSI_MAGENTA = "\x1b[35m";
+	static #ANSI_BLUE = "\x1b[34m";
+	static #ANSI_GREEN = "\x1b[32m";
+	static #ANSI_YELLOW = "\x1b[33m";
+	static #ANSI_RED = "\x1b[31m";
+	static #ANSI_WHITE = "\x1b[37m";
 
-	static #labelOf(kind: string): string {
-		switch (kind) {
-		case "DirectorySegment": return "Directory";
-		case "BranchSegment": return "Branch";
-		case "ModelSegment": return "Model";
-		case "SevenDaySegment": return "7-day limit";
-		case "FiveHourSegment": return "5-hour limit";
-		case "ContextSegment": return "Context";
-		default: throw new TypeError(`Unknown segment kind '${kind}'`);
-		}
+	static #unwrap<Value>(result: Value | symbol): Value {
+		if (isCancel(result)) throw new CancellationError();
+		return result;
 	}
 
-	static #kindOf(segment: Segment): string {
-		if (segment instanceof DirectorySegment) return "DirectorySegment";
-		if (segment instanceof BranchSegment) return "BranchSegment";
-		if (segment instanceof ModelSegment) return "ModelSegment";
-		if (segment instanceof SevenDaySegment) return "SevenDaySegment";
-		if (segment instanceof FiveHourSegment) return "FiveHourSegment";
-		if (segment instanceof ContextSegment) return "ContextSegment";
+	static #isLabel(segment: Segment): segment is LabelSegment {
+		return segment instanceof DirectorySegment || segment instanceof BranchSegment || segment instanceof ModelSegment;
+	}
+
+	static #isGauge(segment: Segment): segment is GaugeSegment {
+		return segment instanceof SevenDaySegment || segment instanceof FiveHourSegment || segment instanceof ContextSegment;
+	}
+
+	static #labelOf(segment: Segment): string {
+		if (segment instanceof DirectorySegment) return "Directory";
+		if (segment instanceof BranchSegment) return "Branch";
+		if (segment instanceof ModelSegment) return "Model";
+		if (segment instanceof SevenDaySegment) return "7-day limit";
+		if (segment instanceof FiveHourSegment) return "5-hour limit";
+		if (segment instanceof ContextSegment) return "Context";
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	static #colorOf(segment: Segment): string {
-		if (segment instanceof DirectorySegment) return segment.color;
-		if (segment instanceof BranchSegment) return segment.color;
-		if (segment instanceof ModelSegment) return segment.color;
-		return "cyan";
-	}
-
-	static #thresholdsOf(segment: Segment): Thresholds {
-		if (segment instanceof SevenDaySegment) return segment.thresholds;
-		if (segment instanceof FiveHourSegment) return segment.thresholds;
-		if (segment instanceof ContextSegment) return segment.thresholds;
-		return new Thresholds(30, 10);
-	}
-
-	static #barOf(segment: Segment): Bar {
-		if (segment instanceof SevenDaySegment) return segment.bar;
-		if (segment instanceof FiveHourSegment) return segment.bar;
-		if (segment instanceof ContextSegment) return segment.bar;
-		return new Bar(10, "█", "░");
-	}
-
-	static #buildSegment(kind: string, enabled: boolean, color: string, thresholds: Thresholds, bar: Bar): Segment {
-		switch (kind) {
-		case "DirectorySegment": return new DirectorySegment(enabled, color);
-		case "BranchSegment": return new BranchSegment(enabled, color);
-		case "ModelSegment": return new ModelSegment(enabled, color);
-		case "SevenDaySegment": return new SevenDaySegment(enabled, thresholds, bar);
-		case "FiveHourSegment": return new FiveHourSegment(enabled, thresholds, bar);
-		case "ContextSegment": return new ContextSegment(enabled, thresholds, bar);
-		default: throw new TypeError(`Unknown segment kind '${kind}'`);
+	static #ansiOf(color: Color): string {
+		switch (color) {
+		case Color.cyan: return ConfigurationController.#ANSI_CYAN;
+		case Color.magenta: return ConfigurationController.#ANSI_MAGENTA;
+		case Color.blue: return ConfigurationController.#ANSI_BLUE;
+		case Color.green: return ConfigurationController.#ANSI_GREEN;
+		case Color.yellow: return ConfigurationController.#ANSI_YELLOW;
+		case Color.red: return ConfigurationController.#ANSI_RED;
+		case Color.white: return ConfigurationController.#ANSI_WHITE;
+		default: return ConfigurationController.#ANSI_DEFAULT;
 		}
 	}
 
-	static #isLabelKind(kind: string): boolean {
-		switch (kind) {
-		case "DirectorySegment":
-		case "BranchSegment":
-		case "ModelSegment": return true;
-		default: return false;
+	async #selectEnabled(segments: Segment[]): Promise<Segment[]> {
+		const chosen = ConfigurationController.#unwrap(await multiselect({
+			message: "Segments",
+			options: segments.map(segment => ({
+				value: segment,
+				label: ConfigurationController.#labelOf(segment)
+			})),
+			initialValues: segments.filter(segment => segment.enabled),
+			required: false,
+		}));
+
+		for (const segment of segments) {
+			segment.enabled = chosen.includes(segment);
+		}
+		return chosen;
+	}
+
+	async #orderSegments(enabled: readonly Segment[]): Promise<Segment[]> {
+		if (enabled.length <= 1) return [...enabled];
+		const ordered: Segment[] = [];
+		const remaining = [...enabled];
+		while (remaining.length > 1) {
+			const position = ordered.length + 1;
+			const chosen = ConfigurationController.#unwrap(await select({
+				message: `Position ${position}`,
+				options: remaining.map(segment => ({
+					value: segment,
+					label: ConfigurationController.#labelOf(segment)
+				})),
+			}));
+			ordered.push(chosen);
+			remaining.splice(remaining.indexOf(chosen), 1);
+		}
+		ordered.push(remaining[0]);
+		return ordered;
+	}
+
+	async #editColors(segments: Segment[]): Promise<void> {
+		const labels = segments.filter(segment => segment.enabled).filter(ConfigurationController.#isLabel);
+		if (labels.length < 1) return;
+
+		const customize = ConfigurationController.#unwrap(await confirm({
+			message: "Customize colors?",
+			initialValue: false
+		}));
+		if (!customize) return;
+
+		for (const segment of labels) {
+			segment.color = ConfigurationController.#unwrap(await select({
+				message: ConfigurationController.#labelOf(segment),
+				options: Object.values(Color).map((color) => ({
+					value: color,
+					label: `${ConfigurationController.#ansiOf(color)}${color}${ConfigurationController.#ANSI_DEFAULT}`,
+				})),
+				initialValue: segment.color,
+			}));
+		}
+	}
+
+	async #editThresholds(segments: Segment[]): Promise<void> {
+		const gauges = segments.filter(ConfigurationController.#isGauge);
+		if (gauges.length < 1) return;
+		const [gauge] = gauges;
+		const current = gauge.thresholds;
+
+		const customize = ConfigurationController.#unwrap(await confirm({
+			message: "Customize thresholds?",
+			initialValue: false
+		}));
+		if (!customize) return;
+
+		const warn = Number(ConfigurationController.#unwrap(await text({
+			message: "Warn below %",
+			defaultValue: String(current.warn),
+			placeholder: String(current.warn),
+			validate(value): Error | undefined {
+				const percent = Number(value);
+				if (!Number.isInteger(percent)) return new Error(`The percent ${percent} must be a finite integer number`);
+				if (1 > percent || percent > 99) return new RangeError(`The percent ${percent} is out of range [1 - 99]`);
+			},
+		})));
+		const alert = Number(ConfigurationController.#unwrap(await text({
+			message: "Alert below %",
+			defaultValue: String(current.alert),
+			placeholder: String(current.alert),
+			validate(value): Error | undefined {
+				const percent = Number(value);
+				if (!Number.isInteger(percent)) return new Error(`The percent ${percent} must be a finite integer number`);
+				if (1 > percent || percent >= warn) return new RangeError(`The percent ${percent} is out of range [1 - ${warn})`);
+			},
+		})));
+		for (const segment of gauges) {
+			segment.thresholds = new Thresholds(warn, alert);
+		}
+	}
+
+	async #editBar(segments: Segment[]): Promise<void> {
+		const gauges = segments.filter(ConfigurationController.#isGauge);
+		if (gauges.length < 1) return;
+		const [gauge] = gauges;
+		const current = gauge.bar;
+
+		const customize = ConfigurationController.#unwrap(await confirm({
+			message: "Customize bar?",
+			initialValue: false
+		}));
+		if (!customize) return;
+
+		const widthString = ConfigurationController.#unwrap(await text({
+			message: "Bar width",
+			defaultValue: String(current.width),
+			placeholder: String(current.width),
+			validate(value): Error | undefined {
+				const width = Number(value);
+				if (!Number.isInteger(width)) return new Error(`The width ${width} must be a finite integer number`);
+				if (1 > width || width > 99) return new RangeError(`The width ${width} is out of range [1 - 30]`);
+			},
+		}));
+		const filled = ConfigurationController.#unwrap(await text({
+			message: "Filled string",
+			defaultValue: current.filled,
+			placeholder: current.filled
+		}));
+		const empty = ConfigurationController.#unwrap(await text({
+			message: "Empty string",
+			defaultValue: current.empty,
+			placeholder: current.empty
+		}));
+
+		for (const segment of gauges) {
+			segment.bar = new Bar(Number(widthString) || current.width, filled || current.filled, empty || current.empty);
 		}
 	}
 
@@ -102,149 +201,21 @@ export class ConfigController extends Controller {
 		const service = new SettingsService();
 		const settings = await service.read();
 
-		intro("Status line config");
+		intro("Status line");
 
-		// --- Segments ---
-		const currentByKind = new Map<string, Segment>(settings.segments.map(segment => [ConfigController.#kindOf(segment), segment]));
-		const currentEnabledKinds = settings.segments.filter(s => s.enabled).map(s => ConfigController.#kindOf(s));
+		const enabled = await this.#selectEnabled(settings.segments);
+		const ordered = await this.#orderSegments(enabled);
+		await this.#editColors(settings.segments);
+		await this.#editThresholds(settings.segments);
+		await this.#editBar(settings.segments);
 
-		const enabledResult = await multiselect<string>({
-			message: "Segments",
-			options: ConfigController.#ALL_KINDS.map(k => ({ value: k, label: ConfigController.#labelOf(k) })),
-			initialValues: currentEnabledKinds,
-			required: false,
-		});
-		if (isCancel(enabledResult)) { cancel(); return; }
-		const enabledKinds = enabledResult;
-
-		// --- Order (only when more than one segment is enabled) ---
-		let orderedKinds: string[];
-		if (enabledKinds.length <= 1) {
-			orderedKinds = [...enabledKinds];
-		} else {
-			// Seed the remaining list from the current order (enabled first), appending newly toggled-on kinds
-			const seeded = currentEnabledKinds.filter(k => enabledKinds.includes(k));
-			for (const kind of enabledKinds) {
-				if (!seeded.includes(kind)) seeded.push(kind);
-			}
-
-			orderedKinds = [];
-			const remaining = [...seeded];
-
-			for (let i = 0; i < enabledKinds.length - 1; i++) {
-				if (remaining.length === 1) {
-					orderedKinds.push(remaining[0]!);
-					break;
-				}
-				const orderResult = await select<string>({
-					message: `Position ${i + 1}`,
-					options: remaining.map(k => ({ value: k, label: ConfigController.#labelOf(k) })),
-				});
-				if (isCancel(orderResult)) { cancel(); return; }
-				orderedKinds.push(orderResult);
-				remaining.splice(remaining.indexOf(orderResult), 1);
-			}
-			if (remaining.length === 1) orderedKinds.push(remaining[0]!);
-		}
-
-		// --- Colors (opt-in, label segments only) ---
-		const colorByKind = new Map<string, string>();
-		for (const kind of ConfigController.#ALL_KINDS) {
-			const existing = currentByKind.get(kind);
-			colorByKind.set(kind, existing !== undefined ? ConfigController.#colorOf(existing) : "cyan");
-		}
-
-		const customizeColors = await confirm({ message: "Customize colors?", initialValue: false });
-		if (isCancel(customizeColors)) { cancel(); return; }
-
-		if (customizeColors) {
-			const labelKinds = orderedKinds.filter(k => ConfigController.#isLabelKind(k));
-			for (const kind of labelKinds) {
-				const colorResult = await select<string>({
-					message: ConfigController.#labelOf(kind),
-					options: ConfigController.#PALETTE as { value: string; label: string; }[],
-					initialValue: colorByKind.get(kind),
-				});
-				if (isCancel(colorResult)) { cancel(); return; }
-				colorByKind.set(kind, colorResult);
-			}
-		}
-
-		// --- Thresholds (opt-in, applied to all gauge segments) ---
-		const firstGauge = settings.segments.find(s => s instanceof SevenDaySegment || s instanceof FiveHourSegment || s instanceof ContextSegment);
-		let sharedThresholds = firstGauge !== undefined ? ConfigController.#thresholdsOf(firstGauge) : new Thresholds(30, 10);
-
-		const customizeThresholds = await confirm({ message: "Customize thresholds?", initialValue: false });
-		if (isCancel(customizeThresholds)) { cancel(); return; }
-
-		if (customizeThresholds) {
-			const curYellow = sharedThresholds.yellow;
-			const curRed = sharedThresholds.red;
-
-			const yellowResult = await text({
-				message: "Yellow below %",
-				defaultValue: String(curYellow),
-				placeholder: String(curYellow),
-				validate: v => { const n = Number(v); if (isNaN(n) || n < 1 || n > 99) return "Enter 1–99"; },
-			});
-			if (isCancel(yellowResult)) { cancel(); return; }
-			const yellow = Number(yellowResult || curYellow);
-
-			const redResult = await text({
-				message: "Red below %",
-				defaultValue: String(curRed),
-				placeholder: String(curRed),
-				validate: v => { const n = Number(v); if (isNaN(n) || n < 1 || n >= yellow) return `Enter 1–${yellow - 1}`; },
-			});
-			if (isCancel(redResult)) { cancel(); return; }
-			sharedThresholds = new Thresholds(yellow, Number(redResult || curRed));
-		}
-
-		// --- Bar (opt-in, applied to all gauge segments) ---
-		const firstGaugeBar = firstGauge !== undefined ? ConfigController.#barOf(firstGauge) : new Bar(10, "█", "░");
-		let sharedBar = firstGaugeBar;
-
-		const customizeBar = await confirm({ message: "Customize bar?", initialValue: false });
-		if (isCancel(customizeBar)) { cancel(); return; }
-
-		if (customizeBar) {
-			const curWidth = sharedBar.width;
-			const curFilled = sharedBar.filled;
-			const curEmpty = sharedBar.empty;
-
-			const widthResult = await text({
-				message: "Bar width",
-				defaultValue: String(curWidth),
-				placeholder: String(curWidth),
-				validate: v => { const n = Number(v); if (!Number.isInteger(n) || n < 1 || n > 30) return "Enter 1–30"; },
-			});
-			if (isCancel(widthResult)) { cancel(); return; }
-
-			const filledResult = await text({ message: "Filled char", defaultValue: curFilled, placeholder: curFilled });
-			if (isCancel(filledResult)) { cancel(); return; }
-
-			const emptyResult = await text({ message: "Empty char", defaultValue: curEmpty, placeholder: curEmpty });
-			if (isCancel(emptyResult)) { cancel(); return; }
-
-			sharedBar = new Bar(
-				Number(widthResult || curWidth),
-				(filledResult as string) || curFilled,
-				(emptyResult as string) || curEmpty,
-			);
-		}
-
-		// --- Assemble settings ---
-		const disabledKinds = ConfigController.#ALL_KINDS.filter(k => !enabledKinds.includes(k));
-		const finalKinds = [...orderedKinds, ...disabledKinds];
-		const segments: Segment[] = finalKinds.map(k =>
-			ConfigController.#buildSegment(k, enabledKinds.includes(k), colorByKind.get(k) ?? "cyan", sharedThresholds, sharedBar),
-		);
-
-		await service.write(new Settings(segments));
+		const disabled = settings.segments.filter(segment => !segment.enabled);
+		await service.write(new Settings([...ordered, ...disabled]));
 		outro("Saved");
 	}
 
 	async catch(error: Error): Promise<void> {
+		if (error instanceof CancellationError) return cancel();
 		stderr.write(`${error}\n`);
 	}
 }

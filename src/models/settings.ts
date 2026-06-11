@@ -1,32 +1,43 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { ArrayOf, Deferred, Descendant, Field, Model } from "adaptive-extender/node";
+import { ArrayOf, Deferred, Descendant, EnumAs, Field, Model } from "adaptive-extender/node";
 
+//#region Color
+export enum Color {
+	cyan = "cyan",
+	magenta = "magenta",
+	blue = "blue",
+	green = "green",
+	yellow = "yellow",
+	red = "red",
+	white = "white",
+}
+//#endregion
 //#region Thresholds
 export interface ThresholdsScheme {
-	yellow: number;
-	red: number;
+	warn: number;
+	alert: number;
 }
 
 export class Thresholds extends Model {
-	@Field(Number, "yellow")
-	yellow: number;
+	@Field(Number, "warn")
+	warn: number;
 
-	@Field(Number, "red")
-	red: number;
+	@Field(Number, "alert")
+	alert: number;
 
 	constructor();
-	constructor(yellow: number, red: number);
-	constructor(yellow?: number, red?: number) {
-		if (yellow === undefined || red === undefined) {
+	constructor(warn: number, alert: number);
+	constructor(warn?: number, alert?: number) {
+		if (warn === undefined || alert === undefined) {
 			super();
 			return;
 		}
 
 		super();
-		this.yellow = yellow;
-		this.red = red;
+		this.warn = warn;
+		this.alert = alert;
 	}
 
 	static get newDefault(): Thresholds {
@@ -70,12 +81,14 @@ export class Bar extends Model {
 	}
 }
 //#endregion
+
 //#region Segment
 export interface SegmentDiscriminator extends DirectorySegmentDiscriminator, BranchSegmentDiscriminator, ModelSegmentDiscriminator, SevenDaySegmentDiscriminator, FiveHourSegmentDiscriminator, ContextSegmentDiscriminator {
 }
 
 export interface SegmentScheme {
 	$type: keyof SegmentDiscriminator;
+	enabled: boolean;
 }
 
 @Descendant(Deferred(_ => DirectorySegment))
@@ -85,138 +98,60 @@ export interface SegmentScheme {
 @Descendant(Deferred(_ => FiveHourSegment))
 @Descendant(Deferred(_ => ContextSegment))
 export abstract class Segment extends Model {
-	abstract enabled: boolean;
+	@Field(Boolean, "enabled")
+	enabled: boolean;
 
-	constructor() {
+	constructor();
+	constructor(enabled: boolean);
+	constructor(enabled?: boolean) {
+		if (enabled === undefined) {
+			super();
+			return;
+		}
+
 		super();
 		if (new.target === Segment) throw new TypeError("Unable to create an instance of an abstract class");
+		this.enabled = enabled;
 	}
 }
 //#endregion
-//#region Directory segment
-export interface DirectorySegmentDiscriminator {
-	"DirectorySegment": DirectorySegment;
+
+//#region Label segment
+export interface LabelSegmentScheme extends SegmentScheme {
+	color: Color;
 }
 
-export interface DirectorySegmentScheme extends SegmentScheme {
-	$type: keyof DirectorySegmentDiscriminator;
-	enabled: boolean;
-	color: string;
-}
-
-export class DirectorySegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
-	@Field(String, "color")
-	color: string;
+@Descendant(Deferred(_ => DirectorySegment))
+@Descendant(Deferred(_ => BranchSegment))
+@Descendant(Deferred(_ => ModelSegment))
+export abstract class LabelSegment extends Segment {
+	@Field(EnumAs(Color), "color")
+	color: Color;
 
 	constructor();
-	constructor(enabled: boolean, color: string);
-	constructor(enabled?: boolean, color?: string) {
+	constructor(enabled: boolean, color: Color);
+	constructor(enabled?: boolean, color?: Color) {
 		if (enabled === undefined || color === undefined) {
 			super();
 			return;
 		}
 
-		super();
-		this.enabled = enabled;
+		super(enabled);
+		if (new.target === LabelSegment) throw new TypeError("Unable to create an instance of an abstract class");
 		this.color = color;
-	}
-
-	static get newDefault(): DirectorySegment {
-		return new DirectorySegment(true, "cyan");
 	}
 }
 //#endregion
-//#region Branch segment
-export interface BranchSegmentDiscriminator {
-	"BranchSegment": BranchSegment;
-}
-
-export interface BranchSegmentScheme extends SegmentScheme {
-	$type: keyof BranchSegmentDiscriminator;
-	enabled: boolean;
-	color: string;
-}
-
-export class BranchSegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
-	@Field(String, "color")
-	color: string;
-
-	constructor();
-	constructor(enabled: boolean, color: string);
-	constructor(enabled?: boolean, color?: string) {
-		if (enabled === undefined || color === undefined) {
-			super();
-			return;
-		}
-
-		super();
-		this.enabled = enabled;
-		this.color = color;
-	}
-
-	static get newDefault(): BranchSegment {
-		return new BranchSegment(true, "magenta");
-	}
-}
-//#endregion
-//#region Model segment
-export interface ModelSegmentDiscriminator {
-	"ModelSegment": ModelSegment;
-}
-
-export interface ModelSegmentScheme extends SegmentScheme {
-	$type: keyof ModelSegmentDiscriminator;
-	enabled: boolean;
-	color: string;
-}
-
-export class ModelSegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
-	@Field(String, "color")
-	color: string;
-
-	constructor();
-	constructor(enabled: boolean, color: string);
-	constructor(enabled?: boolean, color?: string) {
-		if (enabled === undefined || color === undefined) {
-			super();
-			return;
-		}
-
-		super();
-		this.enabled = enabled;
-		this.color = color;
-	}
-
-	static get newDefault(): ModelSegment {
-		return new ModelSegment(true, "blue");
-	}
-}
-//#endregion
-//#region Seven day segment
-export interface SevenDaySegmentDiscriminator {
-	"SevenDaySegment": SevenDaySegment;
-}
-
-export interface SevenDaySegmentScheme extends SegmentScheme {
-	$type: keyof SevenDaySegmentDiscriminator;
-	enabled: boolean;
+//#region Gauge segment
+export interface GaugeSegmentScheme extends SegmentScheme {
 	thresholds: ThresholdsScheme;
 	bar: BarScheme;
 }
 
-export class SevenDaySegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
+@Descendant(Deferred(_ => SevenDaySegment))
+@Descendant(Deferred(_ => FiveHourSegment))
+@Descendant(Deferred(_ => ContextSegment))
+export abstract class GaugeSegment extends Segment {
 	@Field(Thresholds, "thresholds")
 	thresholds: Thresholds;
 
@@ -231,10 +166,111 @@ export class SevenDaySegment extends Segment {
 			return;
 		}
 
-		super();
-		this.enabled = enabled;
+		super(enabled);
+		if (new.target === GaugeSegment) throw new TypeError("Unable to create an instance of an abstract class");
 		this.thresholds = thresholds;
 		this.bar = bar;
+	}
+}
+//#endregion
+
+//#region Directory segment
+export interface DirectorySegmentDiscriminator {
+	"DirectorySegment": DirectorySegment;
+}
+
+export interface DirectorySegmentScheme extends LabelSegmentScheme {
+	$type: keyof DirectorySegmentDiscriminator;
+}
+
+export class DirectorySegment extends LabelSegment {
+	constructor();
+	constructor(enabled: boolean, color: Color);
+	constructor(enabled?: boolean, color?: Color) {
+		if (enabled === undefined || color === undefined) {
+			super();
+			return;
+		}
+
+		super(enabled, color);
+	}
+
+	static get newDefault(): DirectorySegment {
+		return new DirectorySegment(true, Color.cyan);
+	}
+}
+//#endregion
+//#region Branch segment
+export interface BranchSegmentDiscriminator {
+	"BranchSegment": BranchSegment;
+}
+
+export interface BranchSegmentScheme extends LabelSegmentScheme {
+	$type: keyof BranchSegmentDiscriminator;
+}
+
+export class BranchSegment extends LabelSegment {
+	constructor();
+	constructor(enabled: boolean, color: Color);
+	constructor(enabled?: boolean, color?: Color) {
+		if (enabled === undefined || color === undefined) {
+			super();
+			return;
+		}
+
+		super(enabled, color);
+	}
+
+	static get newDefault(): BranchSegment {
+		return new BranchSegment(true, Color.magenta);
+	}
+}
+//#endregion
+//#region Model segment
+export interface ModelSegmentDiscriminator {
+	"ModelSegment": ModelSegment;
+}
+
+export interface ModelSegmentScheme extends LabelSegmentScheme {
+	$type: keyof ModelSegmentDiscriminator;
+}
+
+export class ModelSegment extends LabelSegment {
+	constructor();
+	constructor(enabled: boolean, color: Color);
+	constructor(enabled?: boolean, color?: Color) {
+		if (enabled === undefined || color === undefined) {
+			super();
+			return;
+		}
+
+		super(enabled, color);
+	}
+
+	static get newDefault(): ModelSegment {
+		return new ModelSegment(true, Color.blue);
+	}
+}
+//#endregion
+//#region Seven day segment
+export interface SevenDaySegmentDiscriminator {
+	"SevenDaySegment": SevenDaySegment;
+}
+
+export interface SevenDaySegmentScheme extends GaugeSegmentScheme {
+	$type: keyof SevenDaySegmentDiscriminator;
+}
+
+export class SevenDaySegment extends GaugeSegment {
+	constructor();
+	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
+	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
+		if (enabled === undefined || thresholds === undefined || bar === undefined) {
+			super();
+			return;
+		}
+
+		super(enabled, thresholds, bar);
 	}
 
 	static get newDefault(): SevenDaySegment {
@@ -247,23 +283,11 @@ export interface FiveHourSegmentDiscriminator {
 	"FiveHourSegment": FiveHourSegment;
 }
 
-export interface FiveHourSegmentScheme extends SegmentScheme {
+export interface FiveHourSegmentScheme extends GaugeSegmentScheme {
 	$type: keyof FiveHourSegmentDiscriminator;
-	enabled: boolean;
-	thresholds: ThresholdsScheme;
-	bar: BarScheme;
 }
 
-export class FiveHourSegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
-	@Field(Thresholds, "thresholds")
-	thresholds: Thresholds;
-
-	@Field(Bar, "bar")
-	bar: Bar;
-
+export class FiveHourSegment extends GaugeSegment {
 	constructor();
 	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
 	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
@@ -272,10 +296,7 @@ export class FiveHourSegment extends Segment {
 			return;
 		}
 
-		super();
-		this.enabled = enabled;
-		this.thresholds = thresholds;
-		this.bar = bar;
+		super(enabled, thresholds, bar);
 	}
 
 	static get newDefault(): FiveHourSegment {
@@ -288,23 +309,11 @@ export interface ContextSegmentDiscriminator {
 	"ContextSegment": ContextSegment;
 }
 
-export interface ContextSegmentScheme extends SegmentScheme {
+export interface ContextSegmentScheme extends GaugeSegmentScheme {
 	$type: keyof ContextSegmentDiscriminator;
-	enabled: boolean;
-	thresholds: ThresholdsScheme;
-	bar: BarScheme;
 }
 
-export class ContextSegment extends Segment {
-	@Field(Boolean, "enabled")
-	enabled: boolean;
-
-	@Field(Thresholds, "thresholds")
-	thresholds: Thresholds;
-
-	@Field(Bar, "bar")
-	bar: Bar;
-
+export class ContextSegment extends GaugeSegment {
 	constructor();
 	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
 	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
@@ -313,10 +322,7 @@ export class ContextSegment extends Segment {
 			return;
 		}
 
-		super();
-		this.enabled = enabled;
-		this.thresholds = thresholds;
-		this.bar = bar;
+		super(enabled, thresholds, bar);
 	}
 
 	static get newDefault(): ContextSegment {

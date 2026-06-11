@@ -2,7 +2,7 @@
 
 import "adaptive-extender/node";
 import { execSync, type StdioOptions } from "child_process";
-import { Bar, BranchSegment, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
+import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { type RateLimit, type RateLimits, type StatusLineInput } from "../models/status-line-input.js";
 
 const { round, max, trunc } = Math;
@@ -17,28 +17,28 @@ export class StatusLine {
 	#input: StatusLineInput;
 	#settings: Settings;
 
-	constructor(input: StatusLineInput, settings: Settings) {
+	constructor(input: StatusLineInput, settings: Settings = Settings.newDefault) {
 		this.#input = input;
 		this.#settings = settings;
 	}
 
-	static #paint(name: string): string {
-		switch (name) {
-		case "cyan": return "\x1b[36m";
-		case "magenta": return "\x1b[35m";
-		case "blue": return "\x1b[34m";
-		case "green": return "\x1b[32m";
-		case "yellow": return "\x1b[33m";
-		case "red": return "\x1b[31m";
-		case "white": return "\x1b[37m";
+	static #paint(color: Color): string {
+		switch (color) {
+		case Color.cyan: return "\x1b[36m";
+		case Color.magenta: return "\x1b[35m";
+		case Color.blue: return "\x1b[34m";
+		case Color.green: return "\x1b[32m";
+		case Color.yellow: return "\x1b[33m";
+		case Color.red: return "\x1b[31m";
+		case Color.white: return "\x1b[37m";
 		default: return StatusLine.#RESET;
 		}
 	}
 
-	static #colorOf(available: number, thresholds: Thresholds): string {
-		if (available <= thresholds.red) return "\x1b[31m";
-		if (available <= thresholds.yellow) return "\x1b[33m";
-		return "\x1b[32m";
+	static #colorOf(available: number, thresholds: Thresholds): Color {
+		if (available <= thresholds.alert) return Color.red;
+		if (available <= thresholds.warn) return Color.yellow;
+		return Color.green;
 	}
 
 	static #makeBar(percent: number, bar: Bar): string {
@@ -47,7 +47,7 @@ export class StatusLine {
 	}
 
 	static #renderAvailability(available: number, thresholds: Thresholds, bar: Bar): string {
-		const color = this.#colorOf(available, thresholds);
+		const color = StatusLine.#paint(StatusLine.#colorOf(available, thresholds));
 		return `${color}${this.#makeBar(available, bar)}${this.#RESET} ${color}${available}%${this.#RESET}`;
 	}
 
