@@ -4,6 +4,8 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 
 ![example](./resources/images/status-line-render.svg)
 
+[Change log](./CHANGELOG.md)
+
 ## Setup
 
 1. Install
@@ -12,7 +14,7 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 	npm install -g @eccs0103/claude-cli-status-line
 	```
 
-2. Configure
+2. Connect
 
 	Add to your `~/.claude/settings.json`:
 
@@ -25,43 +27,23 @@ A Claude CLI status line command that renders an ANSI-colored status bar showing
 	}
 	```
 
-	Or run via the Claude CLI:
+Or run via the Claude CLI:
 
-	```
-	claude config set statusLine.type command
-	claude config set statusLine.command "claude-cli-status-line"
-	```
+```
+claude config set statusLine.type command
+claude config set statusLine.command "claude-cli-status-line"
+```
 
 ## What it shows
 
-Default segment order (left to right):
+Directory · Branch · Model · 7-day limit · 5-hour limit · Context window
 
-| Segment           | Color            | Description                                    |
-| ----------------- | ---------------- | ---------------------------------------------- |
-| Directory         | Cyan bold        | Last component of the workspace path           |
-| Branch            | Magenta          | Current git branch (omitted if not a git repo) |
-| Model             | Blue             | Active Claude model display name               |
-| 7-day rate limit  | Green/Yellow/Red | Usage bar + percentage + time to reset         |
-| 5-hour rate limit | Green/Yellow/Red | Usage bar + percentage + time to reset         |
-| Context window    | Green/Yellow/Red | Remaining context as a usage bar + percentage  |
-
-Color thresholds: green (>30% remaining), yellow (10–30%), red (≤10%).
+Color thresholds: green (>30%), yellow (10–30%), red (≤10%).
 
 ## Configuring
-
-Run the interactive config wizard in a terminal:
 
 ```
 claude-cli-status-line config
 ```
 
-The wizard lets you configure (all opt-in, defaults reproduce the look above):
-
-| Option         | What it changes                                        |
-| -------------- | ------------------------------------------------------ |
-| **Segments**   | Toggle each segment on/off and set their display order |
-| **Colors**     | Per-segment color for Directory, Branch, and Model     |
-| **Thresholds** | Percentage cutoffs for yellow and red coloring         |
-| **Bar**        | Width and the filled/empty block characters            |
-
-Settings are saved to `~/.claude/status-line.config.json`.
+Lets you toggle segments, reorder them, change colors, adjust thresholds, and customize the progress bar. Settings are saved to `~/.claude/status-line.config.json`.
