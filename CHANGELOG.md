@@ -1,4 +1,4 @@
-## 1.1.0 (13.06.2026)
+## 1.1.1 (13.06.2026)
 - Added `claude-cli-status-line config` command to customize the status line interactively.
 - Configurable: which segments are shown and in what order, colors for directory/branch/model, warning/critical thresholds, and progress bar width and characters.
 - Settings are saved to `~/.claude/status-line.config.json` and applied automatically on every run.
