@@ -4,15 +4,13 @@ import "adaptive-extender/node";
 import { execSync, type StdioOptions } from "child_process";
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { type RateLimit, type RateLimits, type StatusLineInput } from "../models/status-line-input.js";
+import { ColorSystem, Style } from "./color-system.js";
 
 const { round, max, trunc } = Math;
 
 //#region Status line
 export class StatusLine {
-	static #RESET: string = "\x1b[0m";
-	static #BOLD: string = "\x1b[1m";
-	static #DIM: string = "\x1b[2m";
-	static #SEPARATOR: string = ` \x1b[2m \x1b[0m `;
+	static #SEPARATOR: string = ` ${ColorSystem.paint(" ", Style.dim)} `;
 
 	#input: StatusLineInput;
 	#settings: Settings;
@@ -20,19 +18,6 @@ export class StatusLine {
 	constructor(input: StatusLineInput, settings: Settings) {
 		this.#input = input;
 		this.#settings = settings;
-	}
-
-	static #paint(color: Color): string {
-		switch (color) {
-		case Color.cyan: return "\x1b[36m";
-		case Color.magenta: return "\x1b[35m";
-		case Color.blue: return "\x1b[34m";
-		case Color.green: return "\x1b[32m";
-		case Color.yellow: return "\x1b[33m";
-		case Color.red: return "\x1b[31m";
-		case Color.white: return "\x1b[37m";
-		default: return StatusLine.#RESET;
-		}
 	}
 
 	static #colorOf(available: number, thresholds: Thresholds): Color {
@@ -47,14 +32,14 @@ export class StatusLine {
 	}
 
 	static #renderAvailability(available: number, thresholds: Thresholds, bar: Bar): string {
-		const color = StatusLine.#paint(StatusLine.#colorOf(available, thresholds));
-		return `${color}${this.#makeBar(available, bar)}${this.#RESET} ${color}${available}%${this.#RESET}`;
+		const color = StatusLine.#colorOf(available, thresholds);
+		return `${ColorSystem.paint(this.#makeBar(available, bar), color)} ${ColorSystem.paint(`${available}%`, color)}`;
 	}
 
 	static #renderCountdown(resetsAt: number, divisor: number, label: string): string {
 		const seconds = max(0, resetsAt - trunc(Date.now() / 1000));
 		const value = (seconds / divisor).toFixed(1).replace(/\.0$/, String.empty);
-		return ` ${this.#DIM}for ${value}/${label}${this.#RESET}`;
+		return ` ${ColorSystem.paint(`for ${value}/${label}`, Style.dim)}`;
 	}
 
 	static #renderRateLimit(limit: RateLimit | null, divisor: number, label: string, thresholds: Thresholds, bar: Bar): string | null {
@@ -67,7 +52,7 @@ export class StatusLine {
 	static #renderContextWindow(percent: number | null, thresholds: Thresholds, bar: Bar): string | null {
 		if (percent === null) return null;
 		const available = 100 - round(percent);
-		return `${this.#renderAvailability(available, thresholds, bar)} ${this.#DIM}#${this.#RESET}`;
+		return `${this.#renderAvailability(available, thresholds, bar)} ${ColorSystem.paint("#", Style.dim)}`;
 	}
 
 	static #readBranch(directory: string): string | null {
@@ -83,9 +68,9 @@ export class StatusLine {
 	}
 
 	#renderSegment(segment: Segment, folder: string | null, branch: string | null, agent: string | null, rateLimits: RateLimits | null | undefined): string | null {
-		if (segment instanceof DirectorySegment) return `${StatusLine.#paint(segment.color)}${StatusLine.#BOLD}${folder ?? String.empty}${StatusLine.#RESET}`;
-		if (segment instanceof BranchSegment) return branch !== null ? `${StatusLine.#paint(segment.color)}${branch}${StatusLine.#RESET}` : null;
-		if (segment instanceof ModelSegment) return agent !== null ? `${StatusLine.#paint(segment.color)}${agent}${StatusLine.#RESET}` : null;
+		if (segment instanceof DirectorySegment) return ColorSystem.paint(ColorSystem.paint(folder ?? String.empty, Style.bold), segment.color);
+		if (segment instanceof BranchSegment) return branch !== null ? ColorSystem.paint(branch, segment.color) : null;
+		if (segment instanceof ModelSegment) return agent !== null ? ColorSystem.paint(agent, segment.color) : null;
 		if (segment instanceof SevenDaySegment) return StatusLine.#renderRateLimit(rateLimits?.sevenDay ?? null, 86_400, "7 d", segment.thresholds, segment.bar);
 		if (segment instanceof FiveHourSegment) return StatusLine.#renderRateLimit(rateLimits?.fiveHour ?? null, 3_600, "5 h", segment.thresholds, segment.bar);
 		if (segment instanceof ContextSegment) return StatusLine.#renderContextWindow(this.#input.contextWindow?.usedPercentage ?? null, segment.thresholds, segment.bar);

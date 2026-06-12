@@ -4,20 +4,14 @@ import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
 import { cancel, intro, isCancel, multiselect, outro, select, text } from "@clack/prompts";
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, type GaugeSegment, type LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
+import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
 
 const { stderr, stdout } = process;
 
 //#region Configuration controller
 export class ConfigurationController extends Controller {
-	static #ANSI_DEFAULT: string = "\x1b[0m";
-	static #ANSI_CYAN = "\x1b[36m";
-	static #ANSI_MAGENTA = "\x1b[35m";
-	static #ANSI_BLUE = "\x1b[34m";
-	static #ANSI_GREEN = "\x1b[32m";
-	static #ANSI_YELLOW = "\x1b[33m";
-	static #ANSI_RED = "\x1b[31m";
-	static #ANSI_WHITE = "\x1b[37m";
+	#service: SettingsService = new SettingsService();
 
 	static #isLabel(segment: Segment): segment is LabelSegment {
 		return segment instanceof DirectorySegment || segment instanceof BranchSegment || segment instanceof ModelSegment;
@@ -37,20 +31,8 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	static #ansiOf(color: Color): string {
-		switch (color) {
-		case Color.cyan: return ConfigurationController.#ANSI_CYAN;
-		case Color.magenta: return ConfigurationController.#ANSI_MAGENTA;
-		case Color.blue: return ConfigurationController.#ANSI_BLUE;
-		case Color.green: return ConfigurationController.#ANSI_GREEN;
-		case Color.yellow: return ConfigurationController.#ANSI_YELLOW;
-		case Color.red: return ConfigurationController.#ANSI_RED;
-		case Color.white: return ConfigurationController.#ANSI_WHITE;
-		default: return ConfigurationController.#ANSI_DEFAULT;
-		}
-	}
-
-	async #selectEnabled(segments: Segment[]): Promise<void> {
+	async #selectEnabled(settings: Settings): Promise<void> {
+		const { segments } = settings;
 		const chosen = await multiselect({
 			message: "Enabled segments",
 			options: segments.map(segment => ({
@@ -92,19 +74,19 @@ export class ConfigurationController extends Controller {
 		settings.segments = [...ordered, ...disabled];
 	}
 
-	async #editColors(segments: Segment[]): Promise<void> {
-		const labels = segments.filter(segment => segment.enabled).filter(ConfigurationController.#isLabel);
+	async #editColors(settings: Settings): Promise<void> {
+		const labels = settings.segments.filter(segment => segment.enabled).filter(ConfigurationController.#isLabel);
 		if (labels.length < 1) return;
 
 		while (true) {
-			const chosen = await select({
+			const chosen = await select<LabelSegment | null>({
 				message: "Colors",
 				options: [
 					...labels.map(segment => ({
-						value: segment as LabelSegment | null,
+						value: segment,
 						label: ConfigurationController.#labelOf(segment),
 					})),
-					{ value: null as LabelSegment | null, label: "Back" },
+					{ value: null, label: "Back" },
 				],
 			});
 			if (isCancel(chosen) || chosen === null) return;
@@ -113,7 +95,7 @@ export class ConfigurationController extends Controller {
 				message: ConfigurationController.#labelOf(chosen),
 				options: Object.values(Color).map(color => ({
 					value: color,
-					label: `${ConfigurationController.#ansiOf(color)}${color}${ConfigurationController.#ANSI_DEFAULT}`,
+					label: ColorSystem.paint(color, color),
 				})),
 				initialValue: chosen.color,
 			});
@@ -122,8 +104,8 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #editThresholds(segments: Segment[]): Promise<void> {
-		const gauges = segments.filter(ConfigurationController.#isGauge);
+	async #editThresholds(settings: Settings): Promise<void> {
+		const gauges = settings.segments.filter(ConfigurationController.#isGauge);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
 		const current = gauge.thresholds;
@@ -159,8 +141,8 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #editBar(segments: Segment[]): Promise<void> {
-		const gauges = segments.filter(ConfigurationController.#isGauge);
+	async #editBar(settings: Settings): Promise<void> {
+		const gauges = settings.segments.filter(ConfigurationController.#isGauge);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
 		const current = gauge.bar;
@@ -196,7 +178,7 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #exitMenu(service: SettingsService, settings: Settings): Promise<boolean> {
+	async #exitMenu(settings: Settings): Promise<boolean> {
 		const choice = await select({
 			message: "Exit",
 			options: [
@@ -208,7 +190,7 @@ export class ConfigurationController extends Controller {
 
 		switch (choice) {
 		case "save":
-			await service.write(settings);
+			await this.#service.write(settings);
 			outro("Saved");
 			return true;
 		case "discard":
@@ -223,8 +205,7 @@ export class ConfigurationController extends Controller {
 			return;
 		}
 
-		const service = new SettingsService();
-		const settings = await service.read();
+		const settings = await this.#service.read();
 
 		intro("Status line");
 
@@ -242,17 +223,17 @@ export class ConfigurationController extends Controller {
 			});
 
 			if (isCancel(action) || action === "exit") {
-				const done = await this.#exitMenu(service, settings);
+				const done = await this.#exitMenu(settings);
 				if (done) return;
 				continue;
 			}
 
 			switch (action) {
-			case "enable": await this.#selectEnabled(settings.segments); break;
+			case "enable": await this.#selectEnabled(settings); break;
 			case "order": await this.#orderSegments(settings); break;
-			case "colors": await this.#editColors(settings.segments); break;
-			case "thresholds": await this.#editThresholds(settings.segments); break;
-			case "bar": await this.#editBar(settings.segments); break;
+			case "colors": await this.#editColors(settings); break;
+			case "thresholds": await this.#editThresholds(settings); break;
+			case "bar": await this.#editBar(settings); break;
 			}
 		}
 	}
