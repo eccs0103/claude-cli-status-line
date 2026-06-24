@@ -7,7 +7,7 @@ import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSe
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
 
-const { stderr, stdout } = process;
+const { stdin, stderr, stdout } = process;
 
 //#region Configuration controller
 export class ConfigurationController extends Controller {
@@ -191,14 +191,7 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async run(): Promise<void> {
-		if (!stdout.isTTY) {
-			stderr.write("Run 'claude-cli-status-line config' in an interactive terminal.\n");
-			return;
-		}
-
-		const settings = await this.#service.read();
-
+	async #runInteraction(settings: Settings): Promise<void> {
 		intro("Status line");
 
 		while (true) {
@@ -226,6 +219,27 @@ export class ConfigurationController extends Controller {
 			case "thresholds": await this.#editThresholds(settings); break;
 			case "bar": await this.#editBar(settings); break;
 			}
+		}
+	}
+
+	async run(): Promise<void> {
+		if (!stdout.isTTY) {
+			stderr.write("Run 'claude-cli-status-line config' in an interactive terminal.\n");
+			return;
+		}
+
+		// Workaround for Node.js #38663 (Windows): toggling raw mode off while closing
+		// the readline interface on Escape drops the next keypress. Hold raw mode on for
+		// the whole session so clack's per-prompt setRawMode(false) is a no-op.
+		const restore = stdin.setRawMode.bind(stdin);
+		stdin.setRawMode = mode => (mode && restore(true), stdin);
+		restore(true);
+		try {
+			const settings = await this.#service.read();
+			await this.#runInteraction(settings);
+		} finally {
+			stdin.setRawMode = restore;
+			restore(false);
 		}
 	}
 
