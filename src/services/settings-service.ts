@@ -24,7 +24,8 @@ export class SettingsService {
 
 	async write(settings: Settings): Promise<void> {
 		await AsyncFileSystem.mkdir(SettingsService.#directory, { recursive: true });
-		await AsyncFileSystem.writeFile(SettingsService.#path, JSON.stringify(Settings.export(settings), undefined, "\t"), "utf8");
+		const raw = JSON.stringify(Settings.export(settings), undefined, "\t");
+		await AsyncFileSystem.writeFile(SettingsService.#path, raw, "utf8");
 	}
 }
 //#endregion

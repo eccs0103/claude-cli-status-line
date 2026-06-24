@@ -20,7 +20,6 @@ export class StatusLineController extends Controller {
 		const settings = await serviceSettings.read();
 		const input = await serviceInput.read();
 		const output = new StatusLine(input, settings).render();
-
 		stdout.write(`${output}\n`);
 	}
 
