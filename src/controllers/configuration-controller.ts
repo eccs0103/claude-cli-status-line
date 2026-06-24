@@ -23,14 +23,11 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	async #selectEnabled(settings: Settings): Promise<void> {
+	async #runSelectEnabled(settings: Settings): Promise<void> {
 		const { segments } = settings;
 		const chosen = await multiselect({
 			message: "Enabled segments",
-			options: segments.map(segment => ({
-				value: segment,
-				label: ConfigurationController.#labelOf(segment),
-			})),
+			options: segments.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
 			initialValues: segments.filter(segment => segment.enabled),
 			required: false,
 		});
@@ -41,7 +38,7 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #orderSegments(settings: Settings): Promise<void> {
+	async #runOrderSegments(settings: Settings): Promise<void> {
 		const enabled = settings.segments.filter(segment => segment.enabled);
 		if (enabled.length <= 1) return;
 
@@ -51,14 +48,11 @@ export class ConfigurationController extends Controller {
 			const position = ordered.length + 1;
 			const chosen = await select({
 				message: `Position ${position}`,
-				options: remaining.map(segment => ({
-					value: segment,
-					label: ConfigurationController.#labelOf(segment),
-				})),
+				options: remaining.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
 			});
 			if (isCancel(chosen)) return;
 			ordered.push(chosen);
-			remaining.splice(remaining.indexOf(chosen), 1);
+			remaining.remove(chosen);
 		}
 		ordered.push(remaining[0]);
 
@@ -66,29 +60,20 @@ export class ConfigurationController extends Controller {
 		settings.segments = [...ordered, ...disabled];
 	}
 
-	async #editColors(settings: Settings): Promise<void> {
+	async #runEditColors(settings: Settings): Promise<void> {
 		const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
 		if (labels.length < 1) return;
 
 		while (true) {
-			const chosen = await select<LabelSegment | null>({
+			const chosen = await select({
 				message: "Colors",
-				options: [
-					...labels.map(segment => ({
-						value: segment,
-						label: ConfigurationController.#labelOf(segment),
-					})),
-					{ value: null, label: "Back" },
-				],
+				options: labels.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
 			});
-			if (isCancel(chosen) || chosen === null) return;
+			if (isCancel(chosen)) return;
 
 			const color = await select({
 				message: ConfigurationController.#labelOf(chosen),
-				options: Object.values(Color).map(color => ({
-					value: color,
-					label: ColorSystem.paint(color, color),
-				})),
+				options: Object.values(Color).map(color => ({ value: color, label: ColorSystem.paint(color, color) })),
 				initialValue: chosen.color,
 			});
 			if (isCancel(color)) continue;
@@ -96,7 +81,7 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #editThresholds(settings: Settings): Promise<void> {
+	async #runEditThresholds(settings: Settings): Promise<void> {
 		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
@@ -133,7 +118,7 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #editBar(settings: Settings): Promise<void> {
+	async #runEditBar(settings: Settings): Promise<void> {
 		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
@@ -150,42 +135,49 @@ export class ConfigurationController extends Controller {
 			},
 		});
 		if (isCancel(widthResult)) return;
+		const width = Number(widthResult);
 
-		const filledResult = await text({
+		const filled = await text({
 			message: "Filled string",
 			defaultValue: current.filled,
 			placeholder: current.filled,
+			validate(value): Error | undefined {
+				if (value?.length !== 1) return new Error(`The filled string must be a single character`);
+			},
 		});
-		if (isCancel(filledResult)) return;
+		if (isCancel(filled)) return;
 
-		const emptyResult = await text({
+		const empty = await text({
 			message: "Empty string",
 			defaultValue: current.empty,
 			placeholder: current.empty,
+			validate(value): Error | undefined {
+				if (value?.length !== 1) return new Error(`The empty string must be a single character`);
+			},
 		});
-		if (isCancel(emptyResult)) return;
+		if (isCancel(empty)) return;
 
 		for (const segment of gauges) {
-			segment.bar = new Bar(Number(widthResult) || current.width, filledResult || current.filled, emptyResult || current.empty);
+			segment.bar = new Bar(width, filled, empty);
 		}
 	}
 
-	async #exitMenu(settings: Settings): Promise<boolean> {
+	async #runExitMenu(settings: Settings): Promise<boolean> {
 		const choice = await select({
 			message: "Exit",
 			options: [
-				{ value: "save", label: "Save & exit" },
-				{ value: "discard", label: "Discard changes" },
+				{ value: true, label: "Save & exit" },
+				{ value: false, label: "Discard changes" },
 			],
 		});
 		if (isCancel(choice)) return false;
 
 		switch (choice) {
-		case "save":
+		case true:
 			await this.#service.write(settings);
 			outro("Saved");
 			return true;
-		case "discard":
+		case false:
 			cancel("Discarded");
 			return true;
 		}
@@ -207,17 +199,17 @@ export class ConfigurationController extends Controller {
 			});
 
 			if (isCancel(action)) {
-				const done = await this.#exitMenu(settings);
+				const done = await this.#runExitMenu(settings);
 				if (done) return;
 				continue;
 			}
 
 			switch (action) {
-			case "enable": await this.#selectEnabled(settings); break;
-			case "order": await this.#orderSegments(settings); break;
-			case "colors": await this.#editColors(settings); break;
-			case "thresholds": await this.#editThresholds(settings); break;
-			case "bar": await this.#editBar(settings); break;
+			case "enable": await this.#runSelectEnabled(settings); break;
+			case "order": await this.#runOrderSegments(settings); break;
+			case "colors": await this.#runEditColors(settings); break;
+			case "thresholds": await this.#runEditThresholds(settings); break;
+			case "bar": await this.#runEditBar(settings); break;
 			}
 		}
 	}
