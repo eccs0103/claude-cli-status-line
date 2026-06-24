@@ -5,57 +5,57 @@ import { Model, Field, Optional, Nullable } from "adaptive-extender/node";
 
 //#region Workspace
 export class Workspace extends Model {
-	@Field(Optional(String), "current_dir")
+	@Field(Optional.Of(String), { name: "current_dir" })
 	currentDir: string | undefined;
 }
 //#endregion
 
 //#region Model info
 export class ModelInfo extends Model {
-	@Field(Optional(String), "display_name")
+	@Field(Optional.Of(String), { name: "display_name" })
 	displayName: string | undefined;
 }
 //#endregion
 
 //#region Rate limit
 export class RateLimit extends Model {
-	@Field(Optional(Nullable(Number)), "used_percentage")
+	@Field(Optional.Of(Nullable.Of(Number)), { name: "used_percentage" })
 	usedPercentage: number | null | undefined;
 
-	@Field(Optional(Nullable(Number)), "resets_at")
+	@Field(Optional.Of(Nullable.Of(Number)), { name: "resets_at" })
 	resetsAt: number | null | undefined;
 }
 //#endregion
 
 //#region Rate limits
 export class RateLimits extends Model {
-	@Field(Optional(Nullable(RateLimit)), "five_hour")
+	@Field(Optional.Of(Nullable.Of(RateLimit)), { name: "five_hour" })
 	fiveHour: RateLimit | null | undefined;
 
-	@Field(Optional(Nullable(RateLimit)), "seven_day")
+	@Field(Optional.Of(Nullable.Of(RateLimit)), { name: "seven_day" })
 	sevenDay: RateLimit | null | undefined;
 }
 //#endregion
 
 //#region Context window
 export class ContextWindow extends Model {
-	@Field(Optional(Nullable(Number)), "used_percentage")
+	@Field(Optional.Of(Nullable.Of(Number)), { name: "used_percentage" })
 	usedPercentage: number | null | undefined;
 }
 //#endregion
 
 //#region Status line input
 export class StatusLineInput extends Model {
-	@Field(Optional(Nullable(Workspace)), "workspace")
+	@Field(Optional.Of(Nullable.Of(Workspace)), { name: "workspace" })
 	workspace: Workspace | null | undefined;
 
-	@Field(Optional(Nullable(ModelInfo)), "model")
+	@Field(Optional.Of(Nullable.Of(ModelInfo)), { name: "model" })
 	model: ModelInfo | null | undefined;
 
-	@Field(Optional(Nullable(RateLimits)), "rate_limits")
+	@Field(Optional.Of(Nullable.Of(RateLimits)), { name: "rate_limits" })
 	rateLimits: RateLimits | null | undefined;
 
-	@Field(Optional(Nullable(ContextWindow)), "context_window")
+	@Field(Optional.Of(Nullable.Of(ContextWindow)), { name: "context_window" })
 	contextWindow: ContextWindow | null | undefined;
 }
 //#endregion

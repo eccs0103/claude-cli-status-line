@@ -32,7 +32,8 @@ export abstract class ColorSystem {
 	static paint(text: string, color: Color): string;
 	static paint(text: string, style: Style): string;
 	static paint(text: string, token: Color | Style): string {
-		return `${ColorSystem.#CODES.get(token) ?? ColorSystem.#RESET}${text}${ColorSystem.#RESET}`;
+		const reset = ColorSystem.#RESET;
+		return `${ColorSystem.#CODES.get(token) ?? reset}${text}${reset}`;
 	}
 }
 //#endregion

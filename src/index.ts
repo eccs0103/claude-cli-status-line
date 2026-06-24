@@ -7,6 +7,7 @@ import { StatusLineController } from "./controllers/status-line-controller.js";
 
 const [, , section] = process.argv;
 switch (section) {
+case undefined: await StatusLineController.launch(); break;
 case "config": await ConfigurationController.launch(); break;
-default: await StatusLineController.launch(); break;
+default: throw new TypeError(`Invalid '${section}' argument for section`);
 }

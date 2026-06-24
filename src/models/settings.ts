@@ -1,7 +1,7 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { ArrayOf, Deferred, Descendant, EnumAs, Field, Model } from "adaptive-extender/node";
+import { Deferred, Descendant, Enum, Field, Model } from "adaptive-extender/node";
 
 //#region Color
 export enum Color {
@@ -21,10 +21,10 @@ export interface ThresholdsScheme {
 }
 
 export class Thresholds extends Model {
-	@Field(Number, "warn")
+	@Field(Number, { name: "warn" })
 	warn: number;
 
-	@Field(Number, "alert")
+	@Field(Number, { name: "alert" })
 	alert: number;
 
 	constructor();
@@ -53,13 +53,13 @@ export interface BarScheme {
 }
 
 export class Bar extends Model {
-	@Field(Number, "width")
+	@Field(Number, { name: "width" })
 	width: number;
 
-	@Field(String, "filled")
+	@Field(String, { name: "filled" })
 	filled: string;
 
-	@Field(String, "empty")
+	@Field(String, { name: "empty" })
 	empty: string;
 
 	constructor();
@@ -98,19 +98,20 @@ export interface SegmentScheme {
 @Descendant(Deferred(_ => FiveHourSegment))
 @Descendant(Deferred(_ => ContextSegment))
 export abstract class Segment extends Model {
-	@Field(Boolean, "enabled")
+	@Field(Boolean, { name: "enabled" })
 	enabled: boolean;
 
 	constructor();
 	constructor(enabled: boolean);
 	constructor(enabled?: boolean) {
+		if (new.target === Segment) throw new TypeError("Unable to create an instance of an abstract class");
+
 		if (enabled === undefined) {
 			super();
 			return;
 		}
 
 		super();
-		if (new.target === Segment) throw new TypeError("Unable to create an instance of an abstract class");
 		this.enabled = enabled;
 	}
 }
@@ -125,19 +126,20 @@ export interface LabelSegmentScheme extends SegmentScheme {
 @Descendant(Deferred(_ => BranchSegment))
 @Descendant(Deferred(_ => ModelSegment))
 export abstract class LabelSegment extends Segment {
-	@Field(EnumAs(Color), "color")
+	@Field(Enum.Of(Color), { name: "color" })
 	color: Color;
 
 	constructor();
 	constructor(enabled: boolean, color: Color);
 	constructor(enabled?: boolean, color?: Color) {
+		if (new.target === LabelSegment) throw new TypeError("Unable to create an instance of an abstract class");
+
 		if (enabled === undefined || color === undefined) {
 			super();
 			return;
 		}
 
 		super(enabled);
-		if (new.target === LabelSegment) throw new TypeError("Unable to create an instance of an abstract class");
 		this.color = color;
 	}
 }
@@ -152,22 +154,23 @@ export interface GaugeSegmentScheme extends SegmentScheme {
 @Descendant(Deferred(_ => FiveHourSegment))
 @Descendant(Deferred(_ => ContextSegment))
 export abstract class GaugeSegment extends Segment {
-	@Field(Thresholds, "thresholds")
+	@Field(Thresholds, { name: "thresholds" })
 	thresholds: Thresholds;
 
-	@Field(Bar, "bar")
+	@Field(Bar, { name: "bar" })
 	bar: Bar;
 
 	constructor();
 	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
 	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
+		if (new.target === GaugeSegment) throw new TypeError("Unable to create an instance of an abstract class");
+
 		if (enabled === undefined || thresholds === undefined || bar === undefined) {
 			super();
 			return;
 		}
 
 		super(enabled);
-		if (new.target === GaugeSegment) throw new TypeError("Unable to create an instance of an abstract class");
 		this.thresholds = thresholds;
 		this.bar = bar;
 	}
@@ -330,13 +333,14 @@ export class ContextSegment extends GaugeSegment {
 	}
 }
 //#endregion
+
 //#region Settings
 export interface SettingsScheme {
 	segments: SegmentScheme[];
 }
 
 export class Settings extends Model {
-	@Field(ArrayOf(Segment), "segments")
+	@Field(Array.Of(Segment), { name: "segments" })
 	segments: Segment[];
 
 	constructor();

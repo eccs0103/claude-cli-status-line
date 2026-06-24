@@ -3,7 +3,7 @@
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
 import { cancel, intro, isCancel, multiselect, outro, select, text } from "@clack/prompts";
-import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, type GaugeSegment, type LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
+import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
 
@@ -12,14 +12,6 @@ const { stderr, stdout } = process;
 //#region Configuration controller
 export class ConfigurationController extends Controller {
 	#service: SettingsService = new SettingsService();
-
-	static #isLabel(segment: Segment): segment is LabelSegment {
-		return segment instanceof DirectorySegment || segment instanceof BranchSegment || segment instanceof ModelSegment;
-	}
-
-	static #isGauge(segment: Segment): segment is GaugeSegment {
-		return segment instanceof SevenDaySegment || segment instanceof FiveHourSegment || segment instanceof ContextSegment;
-	}
 
 	static #labelOf(segment: Segment): string {
 		if (segment instanceof DirectorySegment) return "Directory";
@@ -75,7 +67,7 @@ export class ConfigurationController extends Controller {
 	}
 
 	async #editColors(settings: Settings): Promise<void> {
-		const labels = settings.segments.filter(segment => segment.enabled).filter(ConfigurationController.#isLabel);
+		const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
 		if (labels.length < 1) return;
 
 		while (true) {
@@ -105,7 +97,7 @@ export class ConfigurationController extends Controller {
 	}
 
 	async #editThresholds(settings: Settings): Promise<void> {
-		const gauges = settings.segments.filter(ConfigurationController.#isGauge);
+		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
 		const current = gauge.thresholds;
@@ -142,7 +134,7 @@ export class ConfigurationController extends Controller {
 	}
 
 	async #editBar(settings: Settings): Promise<void> {
-		const gauges = settings.segments.filter(ConfigurationController.#isGauge);
+		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 		if (gauges.length < 1) return;
 		const [gauge] = gauges;
 		const current = gauge.bar;
