@@ -210,11 +210,10 @@ export class ConfigurationController extends Controller {
 					{ value: "colors", label: "Colors" },
 					{ value: "thresholds", label: "Thresholds" },
 					{ value: "bar", label: "Bar" },
-					{ value: "exit", label: "Exit" },
 				],
 			});
 
-			if (isCancel(action) || action === "exit") {
+			if (isCancel(action)) {
 				const done = await this.#exitMenu(settings);
 				if (done) return;
 				continue;
