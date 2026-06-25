@@ -6,11 +6,18 @@ import { isCancel, multiselect, select, type Option } from "@clack/prompts";
 import { Transition } from "./transition.js";
 
 //#region Menu
-export interface ContinueHandler<T> { (value: T): Promisable<Transition>; }
-export interface CancelHandler { (): Promisable<Transition>; }
+export interface ContinueHandler<T> {
+	(value: T): Promisable<Transition>;
+}
 
-export abstract class Menu {
+export interface CancelHandler {
+	(): Promisable<Transition>;
+}
+
+export abstract class Menu<T = unknown> {
 	#title: string;
+	#onContinue: ContinueHandler<T> = this.#continue.bind(this);
+	#onCancel: CancelHandler = this.#cancel.bind(this);
 
 	constructor(title: string) {
 		if (new.target === Menu) throw new TypeError("Unable to create an instance of an abstract class");
@@ -19,84 +26,73 @@ export abstract class Menu {
 
 	get title(): string { return this.#title; }
 
-	abstract build(): Promise<Transition>;
-}
-//#endregion
+	abstract input(): Promisable<T | symbol>;
 
-//#region Selection menu
-export abstract class SelectionMenu<T> extends Menu {
-	#continue: ContinueHandler<T> | null = null;
-	#cancel: CancelHandler | null = null;
+	#continue(value: T): Promisable<Transition> {
+		void value;
+		return Transition.reload;
+	}
 
-	constructor(title: string) {
-		if (new.target === SelectionMenu) throw new TypeError("Unable to create an instance of an abstract class");
-		super(title);
+	#cancel(): Promisable<Transition> {
+		return Transition.back;
 	}
 
 	onContinue(handler: ContinueHandler<T>): void {
-		if (this.#continue !== null) throw new TypeError("Continue handler is already set");
-		this.#continue = handler;
+		this.#onContinue = handler;
 	}
 
 	onCancel(handler: CancelHandler): void {
-		if (this.#cancel !== null) throw new TypeError("Cancel handler is already set");
-		this.#cancel = handler;
+		this.#onCancel = handler;
 	}
-
-	abstract input(): Promisable<T | symbol>;
-
-	#continueDefault(value: T): Transition { void value; return Transition.reload; }
-	#cancelDefault(): Transition { return Transition.back; }
 
 	async build(): Promise<Transition> {
 		const value = await this.input();
-		if (isCancel(value)) {
-			const handler = this.#cancel;
-			return await (handler !== null ? handler() : this.#cancelDefault());
-		}
-		const handler = this.#continue;
-		return await (handler !== null ? handler(value) : this.#continueDefault(value));
+		if (isCancel(value)) return await this.#onCancel();
+		return await this.#onContinue(value);
 	}
 }
 //#endregion
 
 //#region Single selection menu
-export class SingleSelectionMenu<T> extends SelectionMenu<T> {
-	#options: (readonly [string, T])[] = [];
+export class SingleSelectionMenu<T> extends Menu<T> {
+	#cases: (readonly [string, T])[] = [];
 
 	constructor(title: string) {
 		if (new.target !== SingleSelectionMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
 		super(title);
 	}
 
-	atOption(label: string, value: T): void {
-		this.#options.push([label, value]);
+	atCase(label: string, value: T): void {
+		this.#cases.push([label, value]);
 	}
 
 	async input(): Promise<T | symbol> {
-		const options = Array.from(this.#options, ([label, value]) => ({ label, value }) as Option<T>);
-		return await select({ message: this.title, options });
+		const message = this.title;
+		const cases = this.#cases;
+		const options = cases.map(([label, value]) => ({ label, value }) as Option<T>);
+		return await select({ message, options });
 	}
 }
 //#endregion
 
 //#region Multi selection menu
-export class MultiSelectionMenu<T> extends SelectionMenu<T[]> {
-	#options: { label: string; value: T; selected: boolean; }[] = [];
+export class MultiSelectionMenu<T> extends Menu<T[]> {
+	#cases: (readonly [string, T, boolean])[] = [];
 
 	constructor(title: string) {
 		if (new.target !== MultiSelectionMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
 		super(title);
 	}
 
-	atOption(label: string, value: T, selected: boolean = false): void {
-		this.#options.push({ label, value, selected });
+	atCase(label: string, value: T, selected: boolean = false): void {
+		this.#cases.push([label, value, selected]);
 	}
 
 	async input(): Promise<T[] | symbol> {
 		const message = this.title;
-		const options = Array.from(this.#options, ({ label, value }) => ({ label, value }) as Option<T>);
-		const initialValues = this.#options.filter(o => o.selected).map(o => o.value);
+		const cases = this.#cases;
+		const options = cases.map(([label, value]) => ({ label, value }) as Option<T>);
+		const initialValues = cases.filter(([, , selected]) => selected).map(([, value]) => value);
 		const required = false;
 		return await multiselect({ message, options, initialValues, required });
 	}

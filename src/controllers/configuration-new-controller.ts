@@ -24,21 +24,6 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	async #runSelectEnabled(settings: Settings): Promise<void> {
-		const { segments } = settings;
-		const chosen = await multiselect({
-			message: "Enabled segments",
-			options: segments.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
-			initialValues: segments.filter(segment => segment.enabled),
-			required: false,
-		});
-		if (isCancel(chosen)) return;
-
-		for (const segment of segments) {
-			segment.enabled = chosen.includes(segment);
-		}
-	}
-
 	async #runOrderSegments(settings: Settings): Promise<void> {
 		const enabled = settings.segments.filter(segment => segment.enabled);
 		if (enabled.length <= 1) return;
@@ -168,17 +153,19 @@ export class ConfigurationController extends Controller {
 	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu("Exit");
 	#navigator: Navigator = new Navigator();
 
-	async #runInteraction(settings: Settings): Promise<void> {
+	async run(): Promise<void> {
+		const settings = await this.#service.read();
+
 		const menuSettings = this.#menuSettings;
 		const menuEnableSegments = this.#menuEnableSegments;
 		const menuExit = this.#menuExit;
 		const navigator = this.#navigator;
 
-		menuSettings.atOption("Enable segments", menuEnableSegments.title);
-		menuSettings.atOption("Order segments", "order");
-		menuSettings.atOption("Colors", "colors");
-		menuSettings.atOption("Thresholds", "thresholds");
-		menuSettings.atOption("Bar", "bar");
+		menuSettings.atCase("Enable segments", menuEnableSegments.title);
+		menuSettings.atCase("Order segments", "order");
+		menuSettings.atCase("Colors", "colors");
+		menuSettings.atCase("Thresholds", "thresholds");
+		menuSettings.atCase("Bar", "bar");
 		menuSettings.onContinue(async (key) => {
 			switch (key) {
 			case "enable": return Transition.toMenu(menuEnableSegments);
@@ -192,7 +179,7 @@ export class ConfigurationController extends Controller {
 		menuSettings.onCancel(() => Transition.toMenu(menuExit));
 
 		for (const segment of settings.segments) {
-			menuEnableSegments.atOption(ConfigurationController.#labelOf(segment), segment, segment.enabled);
+			menuEnableSegments.atCase(ConfigurationController.#labelOf(segment), segment, segment.enabled);
 		}
 		menuEnableSegments.onContinue((chosen) => {
 			const { segments } = settings;
@@ -202,8 +189,8 @@ export class ConfigurationController extends Controller {
 			return Transition.back;
 		});
 
-		menuExit.atOption("Save & exit", true);
-		menuExit.atOption("Discard changes", false);
+		menuExit.atCase("Save & exit", true);
+		menuExit.atCase("Discard changes", false);
 		menuExit.onContinue(async (save) => {
 			if (save) await this.#service.write(settings);
 			return save ? Transition.success("Saved") : Transition.fail("Discarded");
@@ -213,27 +200,6 @@ export class ConfigurationController extends Controller {
 		navigator.register(menuEnableSegments);
 		navigator.register(menuExit);
 		await navigator.launch(menuSettings);
-	}
-
-	async run(): Promise<void> {
-		if (!stdout.isTTY) {
-			stderr.write("Run 'claude-cli-status-line config' in an interactive terminal.\n");
-			return;
-		}
-
-		// Workaround for Node.js #38663 (Windows): toggling raw mode off while closing
-		// the readline interface on Escape drops the next keypress. Hold raw mode on for
-		// the whole session so clack's per-prompt setRawMode(false) is a no-op.
-		const restore = stdin.setRawMode.bind(stdin);
-		stdin.setRawMode = mode => (mode && restore(true), stdin);
-		restore(true);
-		try {
-			const settings = await this.#service.read();
-			await this.#runInteraction(settings);
-		} finally {
-			stdin.setRawMode = restore;
-			restore(false);
-		}
 	}
 
 	async catch(error: Error): Promise<void> {

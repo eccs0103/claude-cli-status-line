@@ -24,7 +24,7 @@ export abstract class Transition {
 		return TerminationTransition.fail(message);
 	}
 
-	static toMenu(menu: Menu): Transition {
+	static toMenu(menu: Menu<any>): Transition {
 		return new PathTransition(menu);
 	}
 }
