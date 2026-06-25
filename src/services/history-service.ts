@@ -15,7 +15,7 @@ export class History<T> {
 		return this.#stack[this.#index];
 	}
 
-	open(item: T): void {
+	insert(item: T): void {
 		const stack = this.#stack;
 		const feature = this.#index + 1;
 		stack.splice(feature, stack.length - feature);

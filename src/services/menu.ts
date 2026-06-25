@@ -3,11 +3,11 @@
 import "adaptive-extender/node";
 import { type Promisable } from "adaptive-extender/node";
 import { cancel, intro, isCancel, multiselect, outro, select, text, type Option } from "@clack/prompts";
-import { History } from "./history-service.js";
+import { type Transition } from "./navigation.js";
 
 //#region Menu
 export interface PathCallback {
-	(): Promisable<Menu>;
+	(): Promisable<Transition>;
 }
 
 export abstract class Menu {
@@ -20,7 +20,7 @@ export abstract class Menu {
 
 	get title(): string { return this.#title; }
 
-	abstract build(): Promise<Menu>;
+	abstract build(): Promise<Transition>;
 }
 //#endregion
 
@@ -45,7 +45,7 @@ export class SingleSelectionMenu extends SelectionMenu {
 		this.#options.push([label, callback]);
 	}
 
-	async build(): Promise<Menu> {
+	async build(): Promise<Transition> {
 		const message = this.title;
 		const options = this.#options.map(([label, value]) => ({ value, label }) as Option<PathCallback>);
 		const path = await select({ message, options });
@@ -54,22 +54,3 @@ export class SingleSelectionMenu extends SelectionMenu {
 	}
 }
 //#endregion
-
-//#region Navigator
-export class Navigator {
-	#history: History<Menu>;
-
-	navigate(menu: Menu): void {
-		this.#history.open(menu);
-	}
-}
-//#endregion
-
-const ssm = new SingleSelectionMenu("Exit");
-ssm.atOption("Save & exit", () => {
-	// await this.#service.write(settings);
-	throw new Error("Method not implemented"); // outro("Saved");
-});
-ssm.atOption("Discard changes", () => {
-	throw new Error("Method not implemented"); // cancel("Discarded");
-});
