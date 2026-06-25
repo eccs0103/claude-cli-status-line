@@ -1,10 +1,9 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { type Promisable } from "adaptive-extender/node";
-import { cancel, intro, isCancel, multiselect, outro, select, text, type Option } from "@clack/prompts";
-import { History } from "./history-service.js";
-import { type Menu } from "./new-menu.js";
+import { cancel, outro } from "@clack/prompts";
+import { type Menu } from "./menu.js";
+import { History } from "./history.js";
 
 //#region Transition
 export abstract class Transition {
@@ -67,6 +66,7 @@ export class NavigationTransition extends Transition {
 	}
 }
 //#endregion
+
 //#region Termination transition
 export class TerminationTransition extends Transition {
 	#success: boolean;
@@ -97,6 +97,7 @@ export class TerminationTransition extends Transition {
 	}
 }
 //#endregion
+
 //#region Path transition
 export class PathTransition extends Transition {
 	#path: string;
@@ -109,8 +110,7 @@ export class PathTransition extends Transition {
 	get path(): string { return this.#path; }
 
 	apply(routes: Map<string, Menu>, history: History<Menu>): Menu | null {
-		const { path } = this;
-
+		const path = this.#path;
 		const menu = ReferenceError.suppress(routes.get(path), `No menu registered at '${path}' path`);
 		history.insert(menu);
 		return menu;

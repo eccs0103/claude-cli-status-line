@@ -2,11 +2,11 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { cancel, intro, isCancel, multiselect, outro, select, text } from "@clack/prompts";
+import { intro, isCancel, multiselect, select, text } from "@clack/prompts";
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
-import { SingleSelectionMenu } from "../services/new-menu.js";
+import { MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "../menu/index.js";
 
 const { stdin, stderr, stdout } = process;
 
@@ -163,41 +163,56 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #runExitMenu(settings: Settings): Promise<void> {
-		const menu = new SingleSelectionMenu("Exit");
-		menu.atOption("Save & exit", async () => {
-			await this.#service.write(settings);
-			return Transition.success("Saved");
-		});
-		menu.atOption("Discard changes", () => {
-			return Transition.fail("Discarded");
-		});
-	}
+	#menuSettings: SingleSelectionMenu<string> = new SingleSelectionMenu("Settings");
+	#menuEnableSegments: MultiSelectionMenu<Segment> = new MultiSelectionMenu("Enable segments");
+	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu("Exit");
+	#navigator: Navigator = new Navigator();
 
 	async #runInteraction(settings: Settings): Promise<void> {
-		intro("Status line");
+		const menuSettings = this.#menuSettings;
+		const menuEnableSegments = this.#menuEnableSegments;
+		const menuExit = this.#menuExit;
+		const navigator = this.#navigator;
 
-		const menu = new SingleSelectionMenu("Settings");
-		menu.atOption("Enable segments", async () => {
-			await this.#runSelectEnabled(settings);
-			// return Transition.toMenu("Saved");
+		menuSettings.atOption("Enable segments", menuEnableSegments.title);
+		menuSettings.atOption("Order segments", "order");
+		menuSettings.atOption("Colors", "colors");
+		menuSettings.atOption("Thresholds", "thresholds");
+		menuSettings.atOption("Bar", "bar");
+		menuSettings.onContinue(async (key) => {
+			switch (key) {
+			case "enable": return Transition.toMenu(menuEnableSegments.title);
+			case "order": await this.#runOrderSegments(settings); break;
+			case "colors": await this.#runEditColors(settings); break;
+			case "thresholds": await this.#runEditThresholds(settings); break;
+			case "bar": await this.#runEditBar(settings); break;
+			}
+			return Transition.reload;
 		});
-		menu.atOption("Order segments", async () => {
-			await this.#runOrderSegments(settings);
-			// return Transition.toMenu("Saved");
+		menuSettings.onCancel(() => Transition.toMenu(menuExit.title));
+
+		for (const segment of settings.segments) {
+			menuEnableSegments.atOption(ConfigurationController.#labelOf(segment), segment, segment.enabled);
+		}
+		menuEnableSegments.onContinue((chosen) => {
+			const { segments } = settings;
+			for (const segment of segments) {
+				segment.enabled = chosen.includes(segment);
+			}
+			return Transition.back;
 		});
-		menu.atOption("Colors", async () => {
-			await this.#runEditColors(settings);
-			// return Transition.toMenu("Saved");
+
+		menuExit.atOption("Save & exit", true);
+		menuExit.atOption("Discard changes", false);
+		menuExit.onContinue(async (save) => {
+			if (save) await this.#service.write(settings);
+			return save ? Transition.success("Saved") : Transition.fail("Discarded");
 		});
-		menu.atOption("Thresholds", async () => {
-			await this.#runEditThresholds(settings);
-			// return Transition.toMenu("Saved");
-		});
-		menu.atOption("Bar", async () => {
-			await this.#runEditBar(settings);
-			// return Transition.toMenu("Saved");
-		});
+
+		navigator.register(menuSettings.title, menuSettings);
+		navigator.register(menuEnableSegments.title, menuEnableSegments);
+		navigator.register(menuExit.title, menuExit);
+		await navigator.launch(menuSettings.title);
 	}
 
 	async run(): Promise<void> {

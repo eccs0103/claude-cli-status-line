@@ -11,26 +11,26 @@ export class History<T> {
 		this.#stack = [begin];
 	}
 
-	get current(): T {
-		return this.#stack[this.#index];
-	}
+	get current(): T { return this.#stack[this.#index]; }
 
 	insert(item: T): void {
 		const stack = this.#stack;
-		const feature = this.#index + 1;
-		stack.splice(feature, stack.length - feature);
+		const next = this.#index + 1;
+		stack.splice(next, stack.length - next);
 		stack.push(item);
 		this.#index = stack.length - 1;
 	}
 
 	forward(): void {
-		if (this.#index >= this.#stack.length - 1) return;
-		this.#index++;
+		const next = this.#index + 1;
+		if (next > this.#stack.length - 1) return;
+		this.#index = next;
 	}
 
 	back(): void {
-		if (this.#index <= 0) return;
-		this.#index--;
+		const previous = this.#index - 1;
+		if (previous < 0) return;
+		this.#index = previous;
 	}
 }
 //#endregion
