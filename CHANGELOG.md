@@ -1,3 +1,9 @@
+## 1.1.2 (25.06.2026)
+- The status line now renders only when no argument is given; an unrecognized argument throws `Invalid '<arg>' argument for section` instead of silently rendering.
+- The `config` UI now requires a single character for the progress bar's filled and empty strings.
+- In the `config` UI, removed the explicit "Back" and "Exit" menu items — press Escape to go back or exit instead.
+- Fixed dropped keypresses after pressing Escape in the `config` UI on Windows (Node.js #38663 raw-mode workaround).
+
 ## 1.1.1 (13.06.2026)
 - Added `claude-cli-status-line config` command to customize the status line interactively.
 - Configurable: which segments are shown and in what order, colors for directory/branch/model, warning/critical thresholds, and progress bar width and characters.
