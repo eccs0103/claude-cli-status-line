@@ -54,3 +54,27 @@ export class SingleSelectionMenu extends SelectionMenu {
 	}
 }
 //#endregion
+
+//#region Multy selection menu
+export class MultySelectionMenu extends SelectionMenu {
+	#options: (readonly [string, PathCallback])[] = [];
+
+	constructor(title: string) {
+		super(title);
+	}
+
+	atOption(label: string, callback: PathCallback): void {
+		this.#options.push([label, callback]);
+	}
+
+	async build(): Promise<Transition> {
+		const message = "Enabled segments";
+		const options = this.#options.map(([label, value]) => ({ value, label }) as Option<PathCallback>);
+		const initialValues = segments.filter(segment => segment.enabled);
+		const required = false;
+		const paths = await multiselect({ message, options, initialValues, required });
+		if (isCancel(paths)) return Transition.back;
+		return await paths();
+	}
+}
+//#endregion

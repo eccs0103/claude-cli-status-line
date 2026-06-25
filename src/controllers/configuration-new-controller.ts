@@ -6,6 +6,7 @@ import { cancel, intro, isCancel, multiselect, outro, select, text } from "@clac
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
+import { SingleSelectionMenu } from "../services/new-menu.js";
 
 const { stdin, stderr, stdout } = process;
 
@@ -162,56 +163,41 @@ export class ConfigurationController extends Controller {
 		}
 	}
 
-	async #runExitMenu(settings: Settings): Promise<boolean> {
-		const choice = await select({
-			message: "Exit",
-			options: [
-				{ value: true, label: "Save & exit" },
-				{ value: false, label: "Discard changes" },
-			],
-		});
-		if (isCancel(choice)) return false;
-
-		switch (choice) {
-		case true:
+	async #runExitMenu(settings: Settings): Promise<void> {
+		const menu = new SingleSelectionMenu("Exit");
+		menu.atOption("Save & exit", async () => {
 			await this.#service.write(settings);
-			outro("Saved");
-			return true;
-		case false:
-			cancel("Discarded");
-			return true;
-		}
+			return Transition.success("Saved");
+		});
+		menu.atOption("Discard changes", () => {
+			return Transition.fail("Discarded");
+		});
 	}
 
 	async #runInteraction(settings: Settings): Promise<void> {
 		intro("Status line");
 
-		while (true) {
-			const action = await select({
-				message: "Settings",
-				options: [
-					{ value: "enable", label: "Enable segments" },
-					{ value: "order", label: "Order segments" },
-					{ value: "colors", label: "Colors" },
-					{ value: "thresholds", label: "Thresholds" },
-					{ value: "bar", label: "Bar" },
-				],
-			});
-
-			if (isCancel(action)) {
-				const done = await this.#runExitMenu(settings);
-				if (done) return;
-				continue;
-			}
-
-			switch (action) {
-			case "enable": await this.#runSelectEnabled(settings); break;
-			case "order": await this.#runOrderSegments(settings); break;
-			case "colors": await this.#runEditColors(settings); break;
-			case "thresholds": await this.#runEditThresholds(settings); break;
-			case "bar": await this.#runEditBar(settings); break;
-			}
-		}
+		const menu = new SingleSelectionMenu("Settings");
+		menu.atOption("Enable segments", async () => {
+			await this.#runSelectEnabled(settings);
+			// return Transition.toMenu("Saved");
+		});
+		menu.atOption("Order segments", async () => {
+			await this.#runOrderSegments(settings);
+			// return Transition.toMenu("Saved");
+		});
+		menu.atOption("Colors", async () => {
+			await this.#runEditColors(settings);
+			// return Transition.toMenu("Saved");
+		});
+		menu.atOption("Thresholds", async () => {
+			await this.#runEditThresholds(settings);
+			// return Transition.toMenu("Saved");
+		});
+		menu.atOption("Bar", async () => {
+			await this.#runEditBar(settings);
+			// return Transition.toMenu("Saved");
+		});
 	}
 
 	async run(): Promise<void> {
