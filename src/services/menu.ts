@@ -3,7 +3,7 @@
 import "adaptive-extender/node";
 import { type Promisable } from "adaptive-extender/node";
 import { cancel, intro, isCancel, multiselect, outro, select, text, type Option } from "@clack/prompts";
-import { type Transition } from "./navigation.js";
+import { Transition } from "./navigation.js";
 
 //#region Menu
 export interface PathCallback {
@@ -49,7 +49,7 @@ export class SingleSelectionMenu extends SelectionMenu {
 		const message = this.title;
 		const options = this.#options.map(([label, value]) => ({ value, label }) as Option<PathCallback>);
 		const path = await select({ message, options });
-		if (isCancel(path)) throw new Error("Method not implemented");
+		if (isCancel(path)) return Transition.back;
 		return await path();
 	}
 }
