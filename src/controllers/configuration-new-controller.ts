@@ -181,7 +181,7 @@ export class ConfigurationController extends Controller {
 		menuSettings.atOption("Bar", "bar");
 		menuSettings.onContinue(async (key) => {
 			switch (key) {
-			case "enable": return Transition.toMenu(menuEnableSegments.title);
+			case "enable": return Transition.toMenu(menuEnableSegments);
 			case "order": await this.#runOrderSegments(settings); break;
 			case "colors": await this.#runEditColors(settings); break;
 			case "thresholds": await this.#runEditThresholds(settings); break;
@@ -189,7 +189,7 @@ export class ConfigurationController extends Controller {
 			}
 			return Transition.reload;
 		});
-		menuSettings.onCancel(() => Transition.toMenu(menuExit.title));
+		menuSettings.onCancel(() => Transition.toMenu(menuExit));
 
 		for (const segment of settings.segments) {
 			menuEnableSegments.atOption(ConfigurationController.#labelOf(segment), segment, segment.enabled);
@@ -209,10 +209,10 @@ export class ConfigurationController extends Controller {
 			return save ? Transition.success("Saved") : Transition.fail("Discarded");
 		});
 
-		navigator.register(menuSettings.title, menuSettings);
-		navigator.register(menuEnableSegments.title, menuEnableSegments);
-		navigator.register(menuExit.title, menuExit);
-		await navigator.launch(menuSettings.title);
+		navigator.register(menuSettings);
+		navigator.register(menuEnableSegments);
+		navigator.register(menuExit);
+		await navigator.launch(menuSettings);
 	}
 
 	async run(): Promise<void> {

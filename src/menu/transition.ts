@@ -11,7 +11,7 @@ export abstract class Transition {
 		if (new.target === Transition) throw new TypeError("Unable to create an instance of an abstract class");
 	}
 
-	abstract apply(routes: Map<string, Menu>, history: History<Menu>): Menu | null;
+	abstract apply(registry: Set<Menu>, history: History<Menu>): Menu | null;
 
 	static get reload(): Transition { return NavigationTransition.reload; }
 	static get back(): Transition { return NavigationTransition.back; }
@@ -24,8 +24,8 @@ export abstract class Transition {
 		return TerminationTransition.fail(message);
 	}
 
-	static toMenu(path: string): Transition {
-		return new PathTransition(path);
+	static toMenu(menu: Menu): Transition {
+		return new PathTransition(menu);
 	}
 }
 //#endregion
@@ -51,8 +51,8 @@ export class NavigationTransition extends Transition {
 	static get back(): NavigationTransition { return this.#back; }
 	static get reload(): NavigationTransition { return this.#reload; }
 
-	apply(routes: Map<string, Menu>, history: History<Menu>): Menu | null {
-		void routes;
+	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
+		void registry;
 		switch (this) {
 		case NavigationTransition.#back: {
 			history.back();
@@ -81,8 +81,8 @@ export class TerminationTransition extends Transition {
 	get success(): boolean { return this.#success; }
 	get message(): string { return this.#message; }
 
-	apply(routes: Map<string, Menu>, history: History<Menu>): Menu | null {
-		void routes, history;
+	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
+		void registry, history;
 		const message = this.#message;
 		!this.#success ? cancel(message) : outro(message);
 		return null;
@@ -100,18 +100,18 @@ export class TerminationTransition extends Transition {
 
 //#region Path transition
 export class PathTransition extends Transition {
-	#path: string;
+	#menu: Menu;
 
-	constructor(path: string) {
+	constructor(menu: Menu) {
 		super();
-		this.#path = path;
+		this.#menu = menu;
 	}
 
-	get path(): string { return this.#path; }
+	get menu(): Menu { return this.#menu; }
 
-	apply(routes: Map<string, Menu>, history: History<Menu>): Menu | null {
-		const path = this.#path;
-		const menu = ReferenceError.suppress(routes.get(path), `No menu registered at '${path}' path`);
+	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
+		const menu = this.#menu;
+		if (!registry.has(menu)) throw new Error(`No menu '${menu.title}' exists at registy`);
 		history.insert(menu);
 		return menu;
 	}

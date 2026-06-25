@@ -33,16 +33,14 @@ export abstract class SelectionMenu<T> extends Menu {
 		super(title);
 	}
 
-	onContinue(handler: ContinueHandler<T>): this {
+	onContinue(handler: ContinueHandler<T>): void {
 		if (this.#continue !== null) throw new TypeError("Continue handler is already set");
 		this.#continue = handler;
-		return this;
 	}
 
-	onCancel(handler: CancelHandler): this {
+	onCancel(handler: CancelHandler): void {
 		if (this.#cancel !== null) throw new TypeError("Cancel handler is already set");
 		this.#cancel = handler;
-		return this;
 	}
 
 	abstract input(): Promisable<T | symbol>;
@@ -71,9 +69,8 @@ export class SingleSelectionMenu<T> extends SelectionMenu<T> {
 		super(title);
 	}
 
-	atOption(label: string, value: T): this {
+	atOption(label: string, value: T): void {
 		this.#options.push([label, value]);
-		return this;
 	}
 
 	async input(): Promise<T | symbol> {
@@ -92,9 +89,8 @@ export class MultiSelectionMenu<T> extends SelectionMenu<T[]> {
 		super(title);
 	}
 
-	atOption(label: string, value: T, selected: boolean = false): this {
+	atOption(label: string, value: T, selected: boolean = false): void {
 		this.#options.push({ label, value, selected });
-		return this;
 	}
 
 	async input(): Promise<T[] | symbol> {

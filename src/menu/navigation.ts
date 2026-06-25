@@ -8,21 +8,24 @@ import { intro } from "@clack/prompts";
 
 //#region Navigator
 export class Navigator {
-	#routes: Map<string, Menu> = new Map();
+	#registry: Set<Menu> = new Set();
 
-	register(path: string, menu: Menu): this {
-		if (!this.#routes.add(path, menu)) throw new Error(`Already registered menu at '${path}' path`);
+	register(menu: Menu): this {
+		const registry = this.#registry;
+		const { size } = registry;
+		if (size === registry.add(menu).size) throw new Error(`The menu '${menu.title}' already exists at registy`);
 		return this;
 	}
 
-	async launch(path: string): Promise<void> {
+	async launch(menu: Menu): Promise<void> {
 		intro("Status line");
-
-		const initial = ReferenceError.suppress(this.#routes.get(path), `No menu registered at '${path}' path`);
-		const history = new History(initial);
+		
+		const registry = this.#registry;
+		if (!registry.has(menu)) throw new Error(`No menu '${menu.title}' exists at registy`);
+		const history = new History(menu);
 		let transition: Transition = Transition.reload;
 		while (true) {
-			const menu = transition.apply(this.#routes, history);
+			const menu = transition.apply(registry, history);
 			if (menu === null) break;
 			transition = await menu.build();
 		}
