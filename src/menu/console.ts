@@ -1,8 +1,8 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { type Promisable } from "adaptive-extender/node";
-import { cancel, intro, isCancel, multiselect, outro, select, type Option } from "@clack/prompts";
+import { Optional, type Promisable } from "adaptive-extender/node";
+import { cancel, intro, isCancel, multiselect, outro, select, text, type Option } from "@clack/prompts";
 
 const { stdin, stderr, stdout } = process;
 
@@ -24,9 +24,15 @@ export class Console {
 		return isCancel(value);
 	}
 
-	async select<T>(message: string, cases: readonly (readonly [string, T])[]): Promise<T | symbol> {
+	async select<T>(message: string, cases: readonly (readonly [string, T, boolean?])[]): Promise<T | symbol> {
 		const options = cases.map(([label, value]) => ({ label, value }) as Option<T>);
-		return await select({ message, options });
+		const initial = cases.find(([, , initial]) => initial);
+		const initialValue = Optional.map(initial, ([, value]) => value);
+		return await select({ message, options, initialValue });
+	}
+
+	async text(message: string, value: string, validate: (value: string | undefined) => Error | undefined): Promise<string | symbol> {
+		return await text({ message, defaultValue: value, placeholder: value, validate });
 	}
 
 	async multiselect<T>(message: string, cases: readonly (readonly [string, T, boolean])[]): Promise<T[] | symbol> {

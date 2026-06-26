@@ -2,16 +2,33 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { cancel, intro, isCancel, multiselect, outro, select, text } from "@clack/prompts";
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
+import { InputCharacterMenu, InputNumberMenu, Menu, MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "../menu/index.js";
 
-const { stdin, stderr, stdout } = process;
+const { stderr } = process;
 
 //#region Configuration controller
 export class ConfigurationController extends Controller {
 	#service: SettingsService = new SettingsService();
+	#menuSettings: SingleSelectionMenu<Menu> = new SingleSelectionMenu("Settings");
+	#menuEnableSegments: MultiSelectionMenu<Segment> = new MultiSelectionMenu("Enable segments");
+	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu("Exit");
+	#menuOrderFirst: SingleSelectionMenu<Segment> = new SingleSelectionMenu("Swap — first segment");
+	#menuOrderSecond: SingleSelectionMenu<Segment> = new SingleSelectionMenu("Swap — second segment");
+	#menuColors: SingleSelectionMenu<LabelSegment> = new SingleSelectionMenu("Colors");
+	#menuColorPick: SingleSelectionMenu<Color> = new SingleSelectionMenu("Color");
+	#menuThresholds: SingleSelectionMenu<string> = new SingleSelectionMenu("Thresholds");
+	#menuWarn: InputNumberMenu = new InputNumberMenu("Warn below %");
+	#menuAlert: InputNumberMenu = new InputNumberMenu("Alert below %");
+	#menuBar: SingleSelectionMenu<string> = new SingleSelectionMenu("Bar");
+	#menuWidth: InputNumberMenu = new InputNumberMenu("Bar width");
+	#menuFilled: InputCharacterMenu = new InputCharacterMenu("Filled string");
+	#menuEmpty: InputCharacterMenu = new InputCharacterMenu("Empty string");
+	#navigator: Navigator = new Navigator();
+	#orderFirst: Segment = undefined!;
+	#editingColor: LabelSegment = undefined!;
 
 	static #labelOf(segment: Segment): string {
 		if (segment instanceof DirectorySegment) return "Directory";
@@ -23,216 +40,199 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	async #runSelectEnabled(settings: Settings): Promise<void> {
-		const { segments } = settings;
-		const chosen = await multiselect({
-			message: "Enabled segments",
-			options: segments.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
-			initialValues: segments.filter(segment => segment.enabled),
-			required: false,
-		});
-		if (isCancel(chosen)) return;
-
-		for (const segment of segments) {
-			segment.enabled = chosen.includes(segment);
-		}
-	}
-
-	async #runOrderSegments(settings: Settings): Promise<void> {
-		const enabled = settings.segments.filter(segment => segment.enabled);
-		if (enabled.length <= 1) return;
-
-		const ordered: Segment[] = [];
-		const remaining = [...enabled];
-		while (remaining.length > 1) {
-			const position = ordered.length + 1;
-			const chosen = await select({
-				message: `Position ${position}`,
-				options: remaining.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
-			});
-			if (isCancel(chosen)) return;
-			ordered.push(chosen);
-			remaining.remove(chosen);
-		}
-		ordered.push(remaining[0]);
-
-		const disabled = settings.segments.filter(segment => !segment.enabled);
-		settings.segments = [...ordered, ...disabled];
-	}
-
-	async #runEditColors(settings: Settings): Promise<void> {
-		const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
-		if (labels.length < 1) return;
-
-		while (true) {
-			const chosen = await select({
-				message: "Colors",
-				options: labels.map(segment => ({ value: segment, label: ConfigurationController.#labelOf(segment) })),
-			});
-			if (isCancel(chosen)) return;
-
-			const color = await select({
-				message: ConfigurationController.#labelOf(chosen),
-				options: Object.values(Color).map(color => ({ value: color, label: ColorSystem.paint(color, color) })),
-				initialValue: chosen.color,
-			});
-			if (isCancel(color)) continue;
-			chosen.color = color;
-		}
-	}
-
-	async #runEditThresholds(settings: Settings): Promise<void> {
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-		if (gauges.length < 1) return;
-		const [gauge] = gauges;
-		const current = gauge.thresholds;
-
-		const warnResult = await text({
-			message: "Warn below %",
-			defaultValue: String(current.warn),
-			placeholder: String(current.warn),
-			validate(value): Error | undefined {
-				const percent = Number(value);
-				if (!Number.isInteger(percent)) return new Error(`The percent ${percent} must be a finite integer number`);
-				if (1 > percent || percent > 99) return new RangeError(`The percent ${percent} is out of range [1 - 99]`);
-			},
-		});
-		if (isCancel(warnResult)) return;
-		const warn = Number(warnResult);
-
-		const alertResult = await text({
-			message: "Alert below %",
-			defaultValue: String(current.alert),
-			placeholder: String(current.alert),
-			validate(value): Error | undefined {
-				const percent = Number(value);
-				if (!Number.isInteger(percent)) return new Error(`The percent ${percent} must be a finite integer number`);
-				if (1 > percent || percent >= warn) return new RangeError(`The percent ${percent} is out of range [1 - ${warn})`);
-			},
-		});
-		if (isCancel(alertResult)) return;
-		const alert = Number(alertResult);
-
-		for (const segment of gauges) {
-			segment.thresholds = new Thresholds(warn, alert);
-		}
-	}
-
-	async #runEditBar(settings: Settings): Promise<void> {
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-		if (gauges.length < 1) return;
-		const [gauge] = gauges;
-		const current = gauge.bar;
-
-		const widthResult = await text({
-			message: "Bar width",
-			defaultValue: String(current.width),
-			placeholder: String(current.width),
-			validate(value): Error | undefined {
-				const width = Number(value);
-				if (!Number.isInteger(width)) return new Error(`The width ${width} must be a finite integer number`);
-				if (1 > width || width > 99) return new RangeError(`The width ${width} is out of range [1 - 99]`);
-			},
-		});
-		if (isCancel(widthResult)) return;
-		const width = Number(widthResult);
-
-		const filled = await text({
-			message: "Filled string",
-			defaultValue: current.filled,
-			placeholder: current.filled,
-			validate(value): Error | undefined {
-				if (value?.length !== 1) return new Error(`The filled string must be a single character`);
-			},
-		});
-		if (isCancel(filled)) return;
-
-		const empty = await text({
-			message: "Empty string",
-			defaultValue: current.empty,
-			placeholder: current.empty,
-			validate(value): Error | undefined {
-				if (value?.length !== 1) return new Error(`The empty string must be a single character`);
-			},
-		});
-		if (isCancel(empty)) return;
-
-		for (const segment of gauges) {
-			segment.bar = new Bar(width, filled, empty);
-		}
-	}
-
-	async #runExitMenu(settings: Settings): Promise<boolean> {
-		const choice = await select({
-			message: "Exit",
-			options: [
-				{ value: true, label: "Save & exit" },
-				{ value: false, label: "Discard changes" },
-			],
-		});
-		if (isCancel(choice)) return false;
-
-		switch (choice) {
-		case true:
-			await this.#service.write(settings);
-			outro("Saved");
-			return true;
-		case false:
-			cancel("Discarded");
-			return true;
-		}
-	}
-
-	async #runInteraction(settings: Settings): Promise<void> {
-		intro("Status line");
-
-		while (true) {
-			const action = await select({
-				message: "Settings",
-				options: [
-					{ value: "enable", label: "Enable segments" },
-					{ value: "order", label: "Order segments" },
-					{ value: "colors", label: "Colors" },
-					{ value: "thresholds", label: "Thresholds" },
-					{ value: "bar", label: "Bar" },
-				],
-			});
-
-			if (isCancel(action)) {
-				const done = await this.#runExitMenu(settings);
-				if (done) return;
-				continue;
-			}
-
-			switch (action) {
-			case "enable": await this.#runSelectEnabled(settings); break;
-			case "order": await this.#runOrderSegments(settings); break;
-			case "colors": await this.#runEditColors(settings); break;
-			case "thresholds": await this.#runEditThresholds(settings); break;
-			case "bar": await this.#runEditBar(settings); break;
-			}
-		}
-	}
-
 	async run(): Promise<void> {
-		if (!stdout.isTTY) {
-			stderr.write("Run 'claude-cli-status-line config' in an interactive terminal.\n");
-			return;
-		}
+		const settings = await this.#service.read();
 
-		// Workaround for Node.js #38663 (Windows): toggling raw mode off while closing
-		// the readline interface on Escape drops the next keypress. Hold raw mode on for
-		// the whole session so clack's per-prompt setRawMode(false) is a no-op.
-		const restore = stdin.setRawMode.bind(stdin);
-		stdin.setRawMode = mode => (mode && restore(true), stdin);
-		restore(true);
-		try {
-			const settings = await this.#service.read();
-			await this.#runInteraction(settings);
-		} finally {
-			stdin.setRawMode = restore;
-			restore(false);
+		const menuSettings = this.#menuSettings;
+		const menuEnableSegments = this.#menuEnableSegments;
+		const menuExit = this.#menuExit;
+		const menuOrderFirst = this.#menuOrderFirst;
+		const menuOrderSecond = this.#menuOrderSecond;
+		const menuColors = this.#menuColors;
+		const menuColorPick = this.#menuColorPick;
+		const menuThresholds = this.#menuThresholds;
+		const menuWarn = this.#menuWarn;
+		const menuAlert = this.#menuAlert;
+		const menuBar = this.#menuBar;
+		const menuWidth = this.#menuWidth;
+		const menuFilled = this.#menuFilled;
+		const menuEmpty = this.#menuEmpty;
+		const navigator = this.#navigator;
+
+		// Settings — top level
+		menuSettings.atCase("Enable segments", menuEnableSegments);
+		menuSettings.atCase("Order segments", menuOrderFirst);
+		menuSettings.atCase("Colors", menuColors);
+		menuSettings.atCase("Thresholds", menuThresholds);
+		menuSettings.atCase("Bar", menuBar);
+		menuSettings.onContinue((key) => {
+			switch (key) {
+			case menuEnableSegments: return Transition.toMenu(menuEnableSegments);
+			case menuOrderFirst: return Transition.toMenu(menuOrderFirst);
+			case menuColors: {
+				const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
+				if (labels.length < 1) return Transition.reload;
+				return Transition.toMenu(menuColors);
+			}
+			case menuThresholds: {
+				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+				if (gauges.length < 1) return Transition.reload;
+				return Transition.toMenu(menuThresholds);
+			}
+			case menuBar: {
+				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+				if (gauges.length < 1) return Transition.reload;
+				return Transition.toMenu(menuBar);
+			}
+			default: throw new TypeError(`Unknown settings key '${key}'`);
+			}
+		});
+		menuSettings.onCancel(() => Transition.toMenu(menuExit));
+
+		// Enable segments
+		for (const segment of settings.segments) {
+			menuEnableSegments.atCase(ConfigurationController.#labelOf(segment), segment, segment.enabled);
 		}
+		menuEnableSegments.onContinue((chosen) => {
+			const { segments } = settings;
+			for (const segment of segments) {
+				segment.enabled = chosen.includes(segment);
+			}
+			return Transition.back;
+		});
+
+		// Order — swap
+		for (const segment of settings.segments) {
+			menuOrderFirst.atCase(ConfigurationController.#labelOf(segment), segment);
+		}
+		menuOrderFirst.onContinue((first) => {
+			this.#orderFirst = first;
+			return Transition.toMenu(menuOrderSecond);
+		});
+
+		for (const segment of settings.segments) {
+			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
+		}
+		menuOrderSecond.onContinue((second) => {
+			const first = this.#orderFirst;
+			const segments = [...settings.segments];
+			const firstIndex = segments.indexOf(first);
+			const secondIndex = segments.indexOf(second);
+			segments[firstIndex] = second;
+			segments[secondIndex] = first;
+			settings.segments = segments;
+			return Transition.back;
+		});
+
+		// Colors
+		const labels = settings.segments.filter(segment => segment instanceof LabelSegment) as LabelSegment[];
+		for (const segment of labels) {
+			menuColors.atCase(ConfigurationController.#labelOf(segment), segment);
+		}
+		menuColors.onContinue((segment) => {
+			this.#editingColor = segment;
+			menuColorPick.setInitial(segment.color);
+			return Transition.toMenu(menuColorPick);
+		});
+
+		for (const color of Object.values(Color)) {
+			menuColorPick.atCase(ColorSystem.paint(color, color), color);
+		}
+		menuColorPick.onContinue((color) => {
+			this.#editingColor.color = color;
+			return Transition.back;
+		});
+
+		// Thresholds
+		menuThresholds.atCase("Warn below %", "warn");
+		menuThresholds.atCase("Alert below %", "alert");
+		menuThresholds.onContinue((key) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			switch (key) {
+			case "warn":
+				menuWarn.value(gauge.thresholds.warn);
+				menuWarn.bounds(1, 99);
+				return Transition.toMenu(menuWarn);
+			case "alert":
+				menuAlert.value(gauge.thresholds.alert);
+				menuAlert.bounds(1, gauge.thresholds.warn, true);
+				return Transition.toMenu(menuAlert);
+			default: throw new TypeError(`Unknown thresholds key '${key}'`);
+			}
+		});
+		menuWarn.onContinue((warn) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			for (const g of gauges) {
+				g.thresholds = new Thresholds(warn, gauge.thresholds.alert);
+			}
+			return Transition.back;
+		});
+		menuAlert.onContinue((alert) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			for (const g of gauges) {
+				g.thresholds = new Thresholds(gauge.thresholds.warn, alert);
+			}
+			return Transition.back;
+		});
+
+		// Bar
+		menuBar.atCase("Bar width", "width");
+		menuBar.atCase("Filled string", "filled");
+		menuBar.atCase("Empty string", "empty");
+		menuBar.onContinue((key) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			switch (key) {
+			case "width":
+				menuWidth.value(gauge.bar.width);
+				menuWidth.bounds(1, 99);
+				return Transition.toMenu(menuWidth);
+			case "filled":
+				menuFilled.value(gauge.bar.filled);
+				return Transition.toMenu(menuFilled);
+			case "empty":
+				menuEmpty.value(gauge.bar.empty);
+				return Transition.toMenu(menuEmpty);
+			default: throw new TypeError(`Unknown bar key '${key}'`);
+			}
+		});
+		menuWidth.onContinue((width) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			for (const g of gauges) {
+				g.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
+			}
+			return Transition.back;
+		});
+		menuFilled.onContinue((filled) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			for (const g of gauges) {
+				g.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
+			}
+			return Transition.back;
+		});
+		menuEmpty.onContinue((empty) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const [gauge] = gauges;
+			for (const g of gauges) {
+				g.bar = new Bar(gauge.bar.width, gauge.bar.filled, empty);
+			}
+			return Transition.back;
+		});
+
+		// Exit
+		menuExit.atCase("Save & exit", true);
+		menuExit.atCase("Discard changes", false);
+		menuExit.onContinue(async (save) => {
+			if (save) await this.#service.write(settings);
+			return save ? Transition.success("Saved") : Transition.fail("Discarded");
+		});
+
+		await navigator.launch(menuSettings);
 	}
 
 	async catch(error: Error): Promise<void> {
