@@ -33,7 +33,7 @@ export class Navigator implements Router {
 		this.#running = false;
 	}
 
-	async #build(menu: Menu<any>): Promise<void> {
+	async #build(menu: Menu): Promise<void> {
 		const console = this.#console;
 		console.intro("Status line");
 		const history = this.#history = new History(menu);
@@ -45,7 +45,7 @@ export class Navigator implements Router {
 		}
 	}
 
-	async launch(menu: Menu<any>): Promise<void> {
+	async launch(menu: Menu): Promise<void> {
 		await this.#console.session(() => this.#build(menu));
 	}
 }

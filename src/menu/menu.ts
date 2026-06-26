@@ -14,7 +14,7 @@ export interface CancelHandler {
 	(): Promisable<Transition>;
 }
 
-export abstract class Menu<T = unknown> {
+export abstract class Menu<T = any> {
 	#title: string;
 	#onContinue: ContinueHandler<T> = this.#continue.bind(this);
 	#onCancel: CancelHandler = this.#cancel.bind(this);
