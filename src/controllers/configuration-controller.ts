@@ -67,27 +67,27 @@ export class ConfigurationController extends Controller {
 		menuSettings.atCase("Bar", menuBar);
 		menuSettings.onContinue((key) => {
 			switch (key) {
-			case menuEnableSegments: return Transition.toMenu(menuEnableSegments);
-			case menuOrderFirst: return Transition.toMenu(menuOrderFirst);
+			case menuEnableSegments: return Transition.to(menuEnableSegments);
+			case menuOrderFirst: return Transition.to(menuOrderFirst);
 			case menuColors: {
 				const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
 				if (labels.length < 1) return Transition.reload;
-				return Transition.toMenu(menuColors);
+				return Transition.to(menuColors);
 			}
 			case menuThresholds: {
 				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 				if (gauges.length < 1) return Transition.reload;
-				return Transition.toMenu(menuThresholds);
+				return Transition.to(menuThresholds);
 			}
 			case menuBar: {
 				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 				if (gauges.length < 1) return Transition.reload;
-				return Transition.toMenu(menuBar);
+				return Transition.to(menuBar);
 			}
 			default: throw new TypeError(`Unknown settings key '${key}'`);
 			}
 		});
-		menuSettings.onCancel(() => Transition.toMenu(menuExit));
+		menuSettings.onCancel(() => Transition.to(menuExit));
 
 		// Enable segments
 		for (const segment of settings.segments) {
@@ -107,7 +107,7 @@ export class ConfigurationController extends Controller {
 		}
 		menuOrderFirst.onContinue((first) => {
 			this.#orderFirst = first;
-			return Transition.toMenu(menuOrderSecond);
+			return Transition.to(menuOrderSecond);
 		});
 
 		for (const segment of settings.segments) {
@@ -132,7 +132,7 @@ export class ConfigurationController extends Controller {
 		menuColors.onContinue((segment) => {
 			this.#editingColor = segment;
 			menuColorPick.setInitial(segment.color);
-			return Transition.toMenu(menuColorPick);
+			return Transition.to(menuColorPick);
 		});
 
 		for (const color of Object.values(Color)) {
@@ -153,11 +153,11 @@ export class ConfigurationController extends Controller {
 			case "warn":
 				menuWarn.value(gauge.thresholds.warn);
 				menuWarn.bounds(1, 99);
-				return Transition.toMenu(menuWarn);
+				return Transition.to(menuWarn);
 			case "alert":
 				menuAlert.value(gauge.thresholds.alert);
 				menuAlert.bounds(1, gauge.thresholds.warn, true);
-				return Transition.toMenu(menuAlert);
+				return Transition.to(menuAlert);
 			default: throw new TypeError(`Unknown thresholds key '${key}'`);
 			}
 		});
@@ -189,13 +189,13 @@ export class ConfigurationController extends Controller {
 			case "width":
 				menuWidth.value(gauge.bar.width);
 				menuWidth.bounds(1, 99);
-				return Transition.toMenu(menuWidth);
+				return Transition.to(menuWidth);
 			case "filled":
 				menuFilled.value(gauge.bar.filled);
-				return Transition.toMenu(menuFilled);
+				return Transition.to(menuFilled);
 			case "empty":
 				menuEmpty.value(gauge.bar.empty);
-				return Transition.toMenu(menuEmpty);
+				return Transition.to(menuEmpty);
 			default: throw new TypeError(`Unknown bar key '${key}'`);
 			}
 		});

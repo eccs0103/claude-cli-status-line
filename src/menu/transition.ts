@@ -23,7 +23,7 @@ export abstract class Transition {
 		return TerminationTransition.fail(message);
 	}
 
-	static toMenu(menu: Menu): Transition {
+	static to(menu: Menu): Transition {
 		return new PathTransition(menu);
 	}
 }
