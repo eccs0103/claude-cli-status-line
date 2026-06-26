@@ -2,54 +2,51 @@
 
 import "adaptive-extender/node";
 import { type Menu } from "./menu.js";
-import { Transition } from "./transition.js";
 import { History } from "./history.js";
-import { intro } from "@clack/prompts";
+import { Console } from "./console.js";
 
-const { stdin, stderr, stdout } = process;
+//#region Router
+export interface Router {
+	back(): void;
+	goto(menu: Menu): void;
+	terminate(success: boolean, message: string): void;
+}
+//#endregion
 
 //#region Navigator
-export class Navigator {
-	#registry: Set<Menu> = new Set();
+export class Navigator implements Router {
+	#console: Console = new Console();
+	#history: History<Menu>;
+	#running: boolean = false;
 
-	register(menu: Menu<any>): void {
-		const registry = this.#registry;
-		const { size } = registry;
-		if (size === registry.add(menu).size) throw new Error(`The menu '${menu.title}' already exists at registy`);
+	back(): void {
+		this.#history.back();
+	}
+
+	goto(menu: Menu): void {
+		this.#history.insert(menu);
+	}
+
+	terminate(success: boolean, message: string): void {
+		const console = this.#console;
+		success ? console.outro(message) : console.cancel(message);
+		this.#running = false;
 	}
 
 	async #build(menu: Menu<any>): Promise<void> {
-		intro("Status line");
-
-		const registry = this.#registry;
-		if (!registry.has(menu)) throw new Error(`No menu '${menu.title}' exists at registy`);
-		const history = new History(menu);
-		let transition: Transition = Transition.reload;
-		while (true) {
-			const menu = transition.apply(registry, history);
-			if (menu === null) break;
-			transition = await menu.build();
+		const console = this.#console;
+		console.intro("Status line");
+		const history = this.#history = new History(menu);
+		this.#running = true;
+		while (this.#running) {
+			const current = history.current;
+			const transition = await current.build(console);
+			transition.apply(this);
 		}
 	}
 
 	async launch(menu: Menu<any>): Promise<void> {
-		if (!stdout.isTTY) {
-			stderr.write("Run 'claude-cli-status-line config' in an interactive terminal.\n");
-			return;
-		}
-
-		// Workaround for Node.js #38663 (Windows): toggling raw mode off while closing
-		// the readline interface on Escape drops the next keypress. Hold raw mode on for
-		// the whole session so clack's per-prompt setRawMode(false) is a no-op.
-		const restore = stdin.setRawMode.bind(stdin);
-		stdin.setRawMode = mode => (mode && restore(true), stdin);
-		restore(true);
-		try {
-			await this.#build(menu);
-		} finally {
-			stdin.setRawMode = restore;
-			restore(false);
-		}
+		await this.#console.session(() => this.#build(menu));
 	}
 }
 //#endregion

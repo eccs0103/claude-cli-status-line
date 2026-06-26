@@ -1,9 +1,8 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { cancel, outro } from "@clack/prompts";
 import { type Menu } from "./menu.js";
-import { History } from "./history.js";
+import { type Router } from "./navigation.js";
 
 //#region Transition
 export abstract class Transition {
@@ -11,7 +10,7 @@ export abstract class Transition {
 		if (new.target === Transition) throw new TypeError("Unable to create an instance of an abstract class");
 	}
 
-	abstract apply(registry: Set<Menu>, history: History<Menu>): Menu | null;
+	abstract apply(router: Router): void;
 
 	static get reload(): Transition { return NavigationTransition.reload; }
 	static get back(): Transition { return NavigationTransition.back; }
@@ -51,16 +50,10 @@ export class NavigationTransition extends Transition {
 	static get back(): NavigationTransition { return this.#back; }
 	static get reload(): NavigationTransition { return this.#reload; }
 
-	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
-		void registry;
+	apply(router: Router): void {
 		switch (this) {
-		case NavigationTransition.#back: {
-			history.back();
-			return history.current;
-		}
-		case NavigationTransition.#reload: {
-			return history.current;
-		}
+		case NavigationTransition.#back: { router.back(); break; }
+		case NavigationTransition.#reload: { break; }
 		default: throw new TypeError(`Invalid navigation instance of transition`);
 		}
 	}
@@ -81,11 +74,8 @@ export class TerminationTransition extends Transition {
 	get success(): boolean { return this.#success; }
 	get message(): string { return this.#message; }
 
-	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
-		void registry, history;
-		const message = this.#message;
-		!this.#success ? cancel(message) : outro(message);
-		return null;
+	apply(router: Router): void {
+		router.terminate(this.#success, this.#message);
 	}
 
 	static success(message: string): TerminationTransition {
@@ -109,11 +99,8 @@ export class PathTransition extends Transition {
 
 	get menu(): Menu { return this.#menu; }
 
-	apply(registry: Set<Menu>, history: History<Menu>): Menu | null {
-		const menu = this.#menu;
-		if (!registry.has(menu)) throw new Error(`No menu '${menu.title}' exists at registy`);
-		history.insert(menu);
-		return menu;
+	apply(router: Router): void {
+		router.goto(this.#menu);
 	}
 }
 //#endregion

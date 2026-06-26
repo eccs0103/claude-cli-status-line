@@ -2,8 +2,8 @@
 
 import "adaptive-extender/node";
 import { type Promisable } from "adaptive-extender/node";
-import { isCancel, multiselect, select, type Option } from "@clack/prompts";
 import { Transition } from "./transition.js";
+import { type Console } from "./console.js";
 
 //#region Menu
 export interface ContinueHandler<T> {
@@ -26,7 +26,7 @@ export abstract class Menu<T = unknown> {
 
 	get title(): string { return this.#title; }
 
-	abstract input(): Promisable<T | symbol>;
+	abstract input(console: Console): Promisable<T | symbol>;
 
 	#continue(value: T): Promisable<Transition> {
 		void value;
@@ -45,9 +45,9 @@ export abstract class Menu<T = unknown> {
 		this.#onCancel = handler;
 	}
 
-	async build(): Promise<Transition> {
-		const value = await this.input();
-		if (isCancel(value)) return await this.#onCancel();
+	async build(console: Console): Promise<Transition> {
+		const value = await this.input(console);
+		if (console.isCancel(value)) return await this.#onCancel();
 		return await this.#onContinue(value);
 	}
 }
@@ -66,11 +66,8 @@ export class SingleSelectionMenu<T> extends Menu<T> {
 		this.#cases.push([label, value]);
 	}
 
-	async input(): Promise<T | symbol> {
-		const message = this.title;
-		const cases = this.#cases;
-		const options = cases.map(([label, value]) => ({ label, value }) as Option<T>);
-		return await select({ message, options });
+	async input(console: Console): Promise<T | symbol> {
+		return await console.select(this.title, this.#cases);
 	}
 }
 //#endregion
@@ -88,13 +85,8 @@ export class MultiSelectionMenu<T> extends Menu<T[]> {
 		this.#cases.push([label, value, selected]);
 	}
 
-	async input(): Promise<T[] | symbol> {
-		const message = this.title;
-		const cases = this.#cases;
-		const options = cases.map(([label, value]) => ({ label, value }) as Option<T>);
-		const initialValues = cases.filter(([, , selected]) => selected).map(([, value]) => value);
-		const required = false;
-		return await multiselect({ message, options, initialValues, required });
+	async input(console: Console): Promise<T[] | symbol> {
+		return await console.multiselect(this.title, this.#cases);
 	}
 }
 //#endregion

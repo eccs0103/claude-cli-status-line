@@ -2,13 +2,13 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { intro, isCancel, multiselect, select, text } from "@clack/prompts";
+import { isCancel, select, text } from "@clack/prompts";
 import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
 import { MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "../menu/index.js";
 
-const { stdin, stderr, stdout } = process;
+const { stderr } = process;
 
 //#region Configuration controller
 export class ConfigurationController extends Controller {
@@ -196,9 +196,6 @@ export class ConfigurationController extends Controller {
 			return save ? Transition.success("Saved") : Transition.fail("Discarded");
 		});
 
-		navigator.register(menuSettings);
-		navigator.register(menuEnableSegments);
-		navigator.register(menuExit);
 		await navigator.launch(menuSettings);
 	}
 
