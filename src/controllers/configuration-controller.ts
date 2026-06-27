@@ -267,7 +267,7 @@ export class ConfigurationController extends Controller {
 		this.#buildExit(settings);
 		this.#buildSettings(settings);
 
-		await this.#navigator.launch(this.#menuSettings);
+		await this.#navigator.launch("Status line", this.#menuSettings);
 	}
 
 	async catch(error: Error): Promise<void> {
