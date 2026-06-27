@@ -40,56 +40,12 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	async run(): Promise<void> {
-		const settings = await this.#service.read();
+	#gauges(settings: Settings): GaugeSegment[] {
+		return settings.segments.filter(segment => segment instanceof GaugeSegment);
+	}
 
-		const menuSettings = this.#menuSettings;
+	#buildEnableSegments(settings: Settings): void {
 		const menuEnableSegments = this.#menuEnableSegments;
-		const menuExit = this.#menuExit;
-		const menuOrderFirst = this.#menuOrderFirst;
-		const menuOrderSecond = this.#menuOrderSecond;
-		const menuColors = this.#menuColors;
-		const menuColorPick = this.#menuColorPick;
-		const menuThresholds = this.#menuThresholds;
-		const menuWarn = this.#menuWarn;
-		const menuAlert = this.#menuAlert;
-		const menuBar = this.#menuBar;
-		const menuWidth = this.#menuWidth;
-		const menuFilled = this.#menuFilled;
-		const menuEmpty = this.#menuEmpty;
-		const navigator = this.#navigator;
-
-		// Settings — top level
-		menuSettings.atCase("Enable segments", menuEnableSegments);
-		menuSettings.atCase("Order segments", menuOrderFirst);
-		menuSettings.atCase("Colors", menuColors);
-		menuSettings.atCase("Thresholds", menuThresholds);
-		menuSettings.atCase("Bar", menuBar);
-		menuSettings.onContinue((key) => {
-			switch (key) {
-			case menuEnableSegments: return Transition.to(menuEnableSegments);
-			case menuOrderFirst: return Transition.to(menuOrderFirst);
-			case menuColors: {
-				const labels = settings.segments.filter(segment => segment.enabled).filter(segment => segment instanceof LabelSegment);
-				if (labels.length < 1) return Transition.reload;
-				return Transition.to(menuColors);
-			}
-			case menuThresholds: {
-				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-				if (gauges.length < 1) return Transition.reload;
-				return Transition.to(menuThresholds);
-			}
-			case menuBar: {
-				const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-				if (gauges.length < 1) return Transition.reload;
-				return Transition.to(menuBar);
-			}
-			default: throw new TypeError(`Unknown settings key '${key}'`);
-			}
-		});
-		menuSettings.onCancel(() => Transition.to(menuExit));
-
-		// Enable segments
 		for (const segment of settings.segments) {
 			menuEnableSegments.atCase(ConfigurationController.#labelOf(segment), segment, segment.enabled);
 		}
@@ -100,19 +56,19 @@ export class ConfigurationController extends Controller {
 			}
 			return Transition.back;
 		});
+	}
 
-		// Order — swap
+	#buildOrderSegments(settings: Settings): void {
+		const menuOrderFirst = this.#menuOrderFirst;
+		const menuOrderSecond = this.#menuOrderSecond;
 		for (const segment of settings.segments) {
 			menuOrderFirst.atCase(ConfigurationController.#labelOf(segment), segment);
+			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
 		}
 		menuOrderFirst.onContinue((first) => {
 			this.#orderFirst = first;
 			return Transition.to(menuOrderSecond);
 		});
-
-		for (const segment of settings.segments) {
-			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
-		}
 		menuOrderSecond.onContinue((second) => {
 			const first = this.#orderFirst;
 			const segments = [...settings.segments];
@@ -123,8 +79,11 @@ export class ConfigurationController extends Controller {
 			settings.segments = segments;
 			return Transition.back;
 		});
+	}
 
-		// Colors
+	#buildColors(settings: Settings): void {
+		const menuColors = this.#menuColors;
+		const menuColorPick = this.#menuColorPick;
 		const labels = settings.segments.filter(segment => segment instanceof LabelSegment);
 		for (const segment of labels) {
 			menuColors.atCase(ConfigurationController.#labelOf(segment), segment);
@@ -134,7 +93,6 @@ export class ConfigurationController extends Controller {
 			menuColorPick.setInitial(segment.color);
 			return Transition.to(menuColorPick);
 		});
-
 		for (const color of Object.values(Color)) {
 			menuColorPick.atCase(ColorSystem.paint(color, color), color);
 		}
@@ -142,12 +100,16 @@ export class ConfigurationController extends Controller {
 			this.#editingColor.color = color;
 			return Transition.back;
 		});
+	}
 
-		// Thresholds
+	#buildThresholds(settings: Settings): void {
+		const menuThresholds = this.#menuThresholds;
+		const menuWarn = this.#menuWarn;
+		const menuAlert = this.#menuAlert;
 		menuThresholds.atCase("Warn below %", "warn");
 		menuThresholds.atCase("Alert below %", "alert");
 		menuThresholds.onContinue((key) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			switch (key) {
 			case "warn":
@@ -162,7 +124,7 @@ export class ConfigurationController extends Controller {
 			}
 		});
 		menuWarn.onContinue((warn) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.thresholds = new Thresholds(warn, gauge.thresholds.alert);
@@ -170,20 +132,25 @@ export class ConfigurationController extends Controller {
 			return Transition.back;
 		});
 		menuAlert.onContinue((alert) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.thresholds = new Thresholds(gauge.thresholds.warn, alert);
 			}
 			return Transition.back;
 		});
+	}
 
-		// Bar
+	#buildBar(settings: Settings): void {
+		const menuBar = this.#menuBar;
+		const menuWidth = this.#menuWidth;
+		const menuFilled = this.#menuFilled;
+		const menuEmpty = this.#menuEmpty;
 		menuBar.atCase("Bar width", "width");
 		menuBar.atCase("Filled string", "filled");
 		menuBar.atCase("Empty string", "empty");
 		menuBar.onContinue((key) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			switch (key) {
 			case "width":
@@ -200,7 +167,7 @@ export class ConfigurationController extends Controller {
 			}
 		});
 		menuWidth.onContinue((width) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
@@ -208,7 +175,7 @@ export class ConfigurationController extends Controller {
 			return Transition.back;
 		});
 		menuFilled.onContinue((filled) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
@@ -216,23 +183,49 @@ export class ConfigurationController extends Controller {
 			return Transition.back;
 		});
 		menuEmpty.onContinue((empty) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const gauges = this.#gauges(settings);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.bar = new Bar(gauge.bar.width, gauge.bar.filled, empty);
 			}
 			return Transition.back;
 		});
+	}
 
-		// Exit
+	#buildExit(settings: Settings): void {
+		const menuExit = this.#menuExit;
 		menuExit.atCase("Save & exit", true);
 		menuExit.atCase("Discard changes", false);
 		menuExit.onContinue(async (save) => {
-			if (save) await this.#service.write(settings);
-			return save ? Transition.success("Saved") : Transition.fail("Discarded");
+			if (!save) return Transition.fail("Discarded");
+			await this.#service.write(settings);
+			return Transition.success("Saved");
 		});
+	}
 
-		await navigator.launch(menuSettings);
+	#buildSettings(settings: Settings): void {
+		const menuSettings = this.#menuSettings;
+		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
+		if (settings.segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
+		if (settings.segments.some(segment => segment instanceof LabelSegment)) menuSettings.atCase("Colors", this.#menuColors);
+		if (settings.segments.some(segment => segment instanceof GaugeSegment)) {
+			menuSettings.atCase("Thresholds", this.#menuThresholds);
+			menuSettings.atCase("Bar", this.#menuBar);
+		}
+		menuSettings.onContinue((menu) => Transition.to(menu));
+		menuSettings.onCancel(() => Transition.to(this.#menuExit));
+	}
+
+	async run(): Promise<void> {
+		const settings = await this.#service.read();
+		this.#buildEnableSegments(settings);
+		this.#buildOrderSegments(settings);
+		this.#buildColors(settings);
+		this.#buildThresholds(settings);
+		this.#buildBar(settings);
+		this.#buildExit(settings);
+		this.#buildSettings(settings);
+		await this.#navigator.launch(this.#menuSettings);
 	}
 
 	async catch(error: Error): Promise<void> {
