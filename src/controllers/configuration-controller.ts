@@ -125,7 +125,7 @@ export class ConfigurationController extends Controller {
 		});
 
 		// Colors
-		const labels = settings.segments.filter(segment => segment instanceof LabelSegment) as LabelSegment[];
+		const labels = settings.segments.filter(segment => segment instanceof LabelSegment);
 		for (const segment of labels) {
 			menuColors.atCase(ConfigurationController.#labelOf(segment), segment);
 		}
@@ -147,7 +147,7 @@ export class ConfigurationController extends Controller {
 		menuThresholds.atCase("Warn below %", "warn");
 		menuThresholds.atCase("Alert below %", "alert");
 		menuThresholds.onContinue((key) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
 			case "warn":
@@ -162,18 +162,18 @@ export class ConfigurationController extends Controller {
 			}
 		});
 		menuWarn.onContinue((warn) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
-			for (const g of gauges) {
-				g.thresholds = new Thresholds(warn, gauge.thresholds.alert);
+			for (const gauge2 of gauges) {
+				gauge2.thresholds = new Thresholds(warn, gauge.thresholds.alert);
 			}
 			return Transition.back;
 		});
 		menuAlert.onContinue((alert) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
-			for (const g of gauges) {
-				g.thresholds = new Thresholds(gauge.thresholds.warn, alert);
+			for (const gauge2 of gauges) {
+				gauge2.thresholds = new Thresholds(gauge.thresholds.warn, alert);
 			}
 			return Transition.back;
 		});
@@ -183,7 +183,7 @@ export class ConfigurationController extends Controller {
 		menuBar.atCase("Filled string", "filled");
 		menuBar.atCase("Empty string", "empty");
 		menuBar.onContinue((key) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
 			case "width":
@@ -200,26 +200,26 @@ export class ConfigurationController extends Controller {
 			}
 		});
 		menuWidth.onContinue((width) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
-			for (const g of gauges) {
-				g.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
+			for (const gauge2 of gauges) {
+				gauge2.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
 			}
 			return Transition.back;
 		});
 		menuFilled.onContinue((filled) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
-			for (const g of gauges) {
-				g.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
+			for (const gauge2 of gauges) {
+				gauge2.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
 			}
 			return Transition.back;
 		});
 		menuEmpty.onContinue((empty) => {
-			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment) as GaugeSegment[];
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
-			for (const g of gauges) {
-				g.bar = new Bar(gauge.bar.width, gauge.bar.filled, empty);
+			for (const gauge2 of gauges) {
+				gauge2.bar = new Bar(gauge.bar.width, gauge.bar.filled, empty);
 			}
 			return Transition.back;
 		});
