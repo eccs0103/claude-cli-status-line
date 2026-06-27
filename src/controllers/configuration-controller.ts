@@ -40,10 +40,6 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	// #gauges(settings: Settings): GaugeSegment[] {
-	// 	return settings.segments.filter(segment => segment instanceof GaugeSegment);
-	// }
-
 	#buildEnableSegments(settings: Settings): void {
 		const menuEnableSegments = this.#menuEnableSegments;
 		const { segments } = settings;
@@ -126,14 +122,16 @@ export class ConfigurationController extends Controller {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
-			case "warn":
+			case "warn": {
 				this.#menuWarn.value(gauge.thresholds.warn);
 				this.#menuWarn.bounds(1, 99);
 				return Transition.to(this.#menuWarn);
-			case "alert":
+			}
+			case "alert": {
 				this.#menuAlert.value(gauge.thresholds.alert);
 				this.#menuAlert.bounds(1, gauge.thresholds.warn, true);
 				return Transition.to(this.#menuAlert);
+			}
 			default: throw new TypeError(`Unknown thresholds key '${key}'`);
 			}
 		});
@@ -170,16 +168,19 @@ export class ConfigurationController extends Controller {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
-			case "width":
+			case "width": {
 				this.#menuWidth.value(gauge.bar.width);
 				this.#menuWidth.bounds(1, 99);
 				return Transition.to(this.#menuWidth);
-			case "filled":
+			}
+			case "filled": {
 				this.#menuFilled.value(gauge.bar.filled);
 				return Transition.to(this.#menuFilled);
-			case "empty":
+			}
+			case "empty": {
 				this.#menuEmpty.value(gauge.bar.empty);
 				return Transition.to(this.#menuEmpty);
+			}
 			default: throw new TypeError(`Unknown bar key '${key}'`);
 			}
 		});
@@ -247,6 +248,7 @@ export class ConfigurationController extends Controller {
 
 	async run(): Promise<void> {
 		const settings = await this.#service.read();
+
 		this.#buildEnableSegments(settings);
 		this.#buildOrderFirst(settings);
 		this.#buildOrderSecond(settings);
@@ -261,6 +263,7 @@ export class ConfigurationController extends Controller {
 		this.#buildEmpty(settings);
 		this.#buildExit(settings);
 		this.#buildSettings(settings);
+
 		await this.#navigator.launch(this.#menuSettings);
 	}
 
