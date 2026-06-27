@@ -6,30 +6,31 @@ import { Transition } from "./transition.js";
 import { type Console } from "./console.js";
 
 //#region Menu
-export interface ContinueHandler<T> {
-	(value: T): Promisable<Transition>;
+export interface ContinueHandler<V, C> {
+	(value: V, context: C): Promisable<Transition>;
 }
 
 export interface CancelHandler {
 	(): Promisable<Transition>;
 }
 
-export abstract class Menu<T = any> {
-	#title: string;
-	#onContinue: ContinueHandler<T> = this.#continue.bind(this);
+export abstract class Menu<V = any, C = void> {
+	#title: string = String.empty;
+	#onContinue: ContinueHandler<V, C> = this.#continue.bind(this);
 	#onCancel: CancelHandler = this.#cancel.bind(this);
 
-	constructor(title: string) {
+	constructor() {
 		if (new.target === Menu) throw new TypeError("Unable to create an instance of an abstract class");
-		this.#title = title;
 	}
 
 	get title(): string { return this.#title; }
+	set title(value: string) { this.#title = value; }
 
-	abstract input(console: Console): Promisable<T | symbol>;
+	abstract input(console: Console): Promisable<V | symbol>;
 
-	#continue(value: T): Promisable<Transition> {
+	#continue(value: V, context: C): Promisable<Transition> {
 		void value;
+		void context;
 		return Transition.reload;
 	}
 
@@ -37,7 +38,7 @@ export abstract class Menu<T = any> {
 		return Transition.back;
 	}
 
-	onContinue(handler: ContinueHandler<T>): void {
+	onContinue(handler: ContinueHandler<V, C>): void {
 		this.#onContinue = handler;
 	}
 
@@ -45,77 +46,82 @@ export abstract class Menu<T = any> {
 		this.#onCancel = handler;
 	}
 
-	async build(console: Console): Promise<Transition> {
+	async build(console: Console, context: C): Promise<Transition> {
 		const value = await this.input(console);
 		if (console.isCancel(value)) return await this.#onCancel();
-		return await this.#onContinue(value);
+		return await this.#onContinue(value, context);
 	}
 }
 //#endregion
 
 //#region Single selection menu
-export class SingleSelectionMenu<T> extends Menu<T> {
-	#cases: (readonly [string, T, boolean])[] = [];
+export class SingleSelectionMenu<V, C = void> extends Menu<V, C> {
+	#cases: (readonly [string, V, boolean])[] = [];
+	#initial: V | undefined = undefined;
 
-	constructor(title: string) {
+	constructor() {
 		if (new.target !== SingleSelectionMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
-		super(title);
+		super();
 	}
 
-	atCase(label: string, value: T, initial: boolean = false): void {
-		this.#cases.push([label, value, initial]);
+	atCase(label: string, value: V): void {
+		this.#cases.push([label, value, value === this.#initial]);
 	}
 
-	setInitial(value: T): void {
-		this.#cases = this.#cases.map(([label, value2]) => [label, value2, value2 === value] as const);
+	get initial(): V | undefined { return this.#initial; }
+	set initial(value: V | undefined) {
+		this.#initial = value;
+		this.#cases = this.#cases.map(([label, value2]): readonly [string, V, boolean] => [label, value2, value !== undefined && value === value2]);
 	}
 
-	async input(console: Console): Promise<T | symbol> {
+	async input(console: Console): Promise<V | symbol> {
 		return await console.select(this.title, this.#cases);
 	}
 }
 //#endregion
 
 //#region Multi selection menu
-export class MultiSelectionMenu<T> extends Menu<T[]> {
-	#cases: (readonly [string, T, boolean])[] = [];
+export class MultiSelectionMenu<V, C = void> extends Menu<V[], C> {
+	#cases: (readonly [string, V, boolean])[] = [];
 
-	constructor(title: string) {
+	constructor() {
 		if (new.target !== MultiSelectionMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
-		super(title);
+		super();
 	}
 
-	atCase(label: string, value: T, selected: boolean = false): void {
+	atCase(label: string, value: V, selected: boolean = false): void {
 		this.#cases.push([label, value, selected]);
 	}
 
-	async input(console: Console): Promise<T[] | symbol> {
+	async input(console: Console): Promise<V[] | symbol> {
 		return await console.multiselect(this.title, this.#cases);
 	}
 }
 //#endregion
 
 //#region Input number menu
-export class InputNumberMenu extends Menu<number> {
+export class InputNumberMenu<C = void> extends Menu<number, C> {
 	#value: number = 0;
 	#minimum: number = 0;
 	#maximum: number = 0;
 	#exclusive: boolean = false;
 
-	constructor(title: string) {
+	constructor() {
 		if (new.target !== InputNumberMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
-		super(title);
+		super();
 	}
 
-	value(value: number): void {
-		this.#value = value;
-	}
+	get value(): number { return this.#value; }
+	set value(value: number) { this.#value = value; }
 
-	bounds(minimum: number, maximum: number, exclusive: boolean = false): void {
-		this.#minimum = minimum;
-		this.#maximum = maximum;
-		this.#exclusive = exclusive;
-	}
+	get minimum(): number { return this.#minimum; }
+	set minimum(value: number) { this.#minimum = value; }
+
+	get maximum(): number { return this.#maximum; }
+	set maximum(value: number) { this.#maximum = value; }
+
+	get exclusive(): boolean { return this.#exclusive; }
+	set exclusive(value: boolean) { this.#exclusive = value; }
 
 	#validate(input: string | undefined): Error | undefined {
 		const number = Number(input);
@@ -135,17 +141,16 @@ export class InputNumberMenu extends Menu<number> {
 //#endregion
 
 //#region Input character menu
-export class InputCharacterMenu extends Menu<string> {
+export class InputCharacterMenu<C = void> extends Menu<string, C> {
 	#value: string = String.empty;
 
-	constructor(title: string) {
+	constructor() {
 		if (new.target !== InputCharacterMenu) throw new TypeError("Unable to create an instance of sealed-extended class");
-		super(title);
+		super();
 	}
 
-	value(value: string): void {
-		this.#value = value;
-	}
+	get value(): string { return this.#value; }
+	set value(value: string) { this.#value = value; }
 
 	#validate(input: string | undefined): Error | undefined {
 		const string = input ?? String.empty;

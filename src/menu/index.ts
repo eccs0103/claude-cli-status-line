@@ -4,3 +4,4 @@ export { type ContinueHandler, type CancelHandler, Menu, SingleSelectionMenu, Mu
 export { Transition } from "./transition.js";
 export { type Router, Navigator } from "./navigation.js";
 export { Console } from "./console.js";
+export { Frame } from "./frame.js";

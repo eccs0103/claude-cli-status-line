@@ -2,13 +2,14 @@
 
 import "adaptive-extender/node";
 import { type Menu } from "./menu.js";
+import { Frame } from "./frame.js";
 import { History } from "./history.js";
 import { Console } from "./console.js";
 
 //#region Router
 export interface Router {
 	back(): void;
-	goto(menu: Menu): void;
+	goto(frame: Frame<any, any>): void;
 	terminate(success: boolean, message: string): void;
 }
 //#endregion
@@ -16,15 +17,15 @@ export interface Router {
 //#region Navigator
 export class Navigator implements Router {
 	#console: Console = new Console();
-	#history: History<Menu>;
+	#history: History<Frame<any, any>>;
 	#running: boolean = false;
 
 	back(): void {
 		this.#history.back();
 	}
 
-	goto(menu: Menu): void {
-		this.#history.insert(menu);
+	goto(frame: Frame<any, any>): void {
+		this.#history.insert(frame);
 	}
 
 	terminate(success: boolean, message: string): void {
@@ -33,10 +34,10 @@ export class Navigator implements Router {
 		this.#running = false;
 	}
 
-	async #build(title: string, menu: Menu): Promise<void> {
+	async #build<V, C>(title: string, menu: Menu<V, C>, context: C): Promise<void> {
 		const console = this.#console;
 		console.intro(title);
-		const history = this.#history = new History(menu);
+		const history = this.#history = new History(new Frame(menu, context));
 		this.#running = true;
 		while (this.#running) {
 			const current = history.current;
@@ -45,8 +46,8 @@ export class Navigator implements Router {
 		}
 	}
 
-	async launch(title: string, menu: Menu): Promise<void> {
-		await this.#console.session(() => this.#build(title, menu));
+	async launch<V, C>(title: string, menu: Menu<V, C>, context: C): Promise<void> {
+		await this.#console.session(() => this.#build(title, menu, context));
 	}
 }
 //#endregion

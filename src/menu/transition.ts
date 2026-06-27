@@ -1,6 +1,7 @@
 "use strict";
 
 import "adaptive-extender/node";
+import { Frame } from "./frame.js";
 import { type Menu } from "./menu.js";
 import { type Router } from "./navigation.js";
 
@@ -15,16 +16,16 @@ export abstract class Transition {
 	static get reload(): Transition { return NavigationTransition.reload; }
 	static get back(): Transition { return NavigationTransition.back; }
 
-	static success(message: string): Transition {
+	static success(message: string): TerminationTransition {
 		return TerminationTransition.success(message);
 	}
 
-	static fail(message: string): Transition {
+	static fail(message: string): TerminationTransition {
 		return TerminationTransition.fail(message);
 	}
 
-	static to(menu: Menu): Transition {
-		return new PathTransition(menu);
+	static to<V, C>(menu: Menu<V, C>, context: C): PathTransition<V, C> {
+		return new PathTransition(new Frame(menu, context));
 	}
 }
 //#endregion
@@ -89,18 +90,18 @@ export class TerminationTransition extends Transition {
 //#endregion
 
 //#region Path transition
-export class PathTransition extends Transition {
-	#menu: Menu;
+export class PathTransition<V, C> extends Transition {
+	#frame: Frame<V, C>;
 
-	constructor(menu: Menu) {
+	constructor(frame: Frame<V, C>) {
 		super();
-		this.#menu = menu;
+		this.#frame = frame;
 	}
 
-	get menu(): Menu { return this.#menu; }
+	get frame(): Frame<V, C> { return this.#frame; }
 
 	apply(router: Router): void {
-		router.goto(this.#menu);
+		router.goto(this.#frame);
 	}
 }
 //#endregion
