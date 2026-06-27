@@ -70,18 +70,18 @@ export class ConfigurationController extends Controller {
 
 	#buildOrderSecond(settings: Settings): void {
 		const menuOrderSecond = this.#menuOrderSecond;
+		const { segments } = settings;
 
-		for (const segment of settings.segments) {
+		for (const segment of segments) {
 			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
 		}
 		menuOrderSecond.onContinue((second) => {
 			const first = this.#orderFirst;
-			const segments = [...settings.segments];
-			const firstIndex = segments.indexOf(first);
-			const secondIndex = segments.indexOf(second);
-			segments[firstIndex] = second;
-			segments[secondIndex] = first;
-			settings.segments = segments;
+
+			const index1 = segments.indexOf(first);
+			const index2 = segments.indexOf(second);
+			segments[index1] = second;
+			segments[index2] = first;
 			return Transition.back;
 		});
 	}
@@ -105,7 +105,7 @@ export class ConfigurationController extends Controller {
 		const menuColorPick = this.#menuColorPick;
 
 		for (const color of Object.values(Color)) {
-			menuColorPick.atCase(ColorSystem.paint(color, color), color);
+			menuColorPick.atCase(ColorSystem.paint(String(color), color), color);
 		}
 		menuColorPick.onContinue((color) => {
 			this.#editingColor.color = color;
@@ -115,22 +115,25 @@ export class ConfigurationController extends Controller {
 
 	#buildThresholds(settings: Settings): void {
 		const menuThresholds = this.#menuThresholds;
+		const menuWarn = this.#menuWarn;
+		const menuAlert = this.#menuAlert;
 
 		menuThresholds.atCase("Warn below %", "warn");
 		menuThresholds.atCase("Alert below %", "alert");
 		menuThresholds.onContinue((key) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
+			const { thresholds } = gauge;
 			switch (key) {
 			case "warn": {
-				this.#menuWarn.value(gauge.thresholds.warn);
-				this.#menuWarn.bounds(1, 99);
-				return Transition.to(this.#menuWarn);
+				menuWarn.value(thresholds.warn);
+				menuWarn.bounds(1, 99);
+				return Transition.to(menuWarn);
 			}
 			case "alert": {
-				this.#menuAlert.value(gauge.thresholds.alert);
-				this.#menuAlert.bounds(1, gauge.thresholds.warn, true);
-				return Transition.to(this.#menuAlert);
+				menuAlert.value(thresholds.alert);
+				menuAlert.bounds(1, thresholds.warn, true);
+				return Transition.to(menuAlert);
 			}
 			default: throw new TypeError(`Unknown thresholds key '${key}'`);
 			}
@@ -140,9 +143,8 @@ export class ConfigurationController extends Controller {
 	#buildWarn(settings: Settings): void {
 		this.#menuWarn.onContinue((warn) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-			const [gauge] = gauges;
-			for (const gauge2 of gauges) {
-				gauge2.thresholds = new Thresholds(warn, gauge.thresholds.alert);
+			for (const gauge of gauges) {
+				gauge.thresholds.warn = warn;
 			}
 			return Transition.back;
 		});
@@ -151,9 +153,8 @@ export class ConfigurationController extends Controller {
 	#buildAlert(settings: Settings): void {
 		this.#menuAlert.onContinue((alert) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-			const [gauge] = gauges;
-			for (const gauge2 of gauges) {
-				gauge2.thresholds = new Thresholds(gauge.thresholds.warn, alert);
+			for (const gauge of gauges) {
+				gauge.thresholds.alert = alert;
 			}
 			return Transition.back;
 		});
@@ -161,25 +162,30 @@ export class ConfigurationController extends Controller {
 
 	#buildBar(settings: Settings): void {
 		const menuBar = this.#menuBar;
+		const menuWidth = this.#menuWidth;
+		const menuFilled = this.#menuFilled;
+		const menuEmpty = this.#menuEmpty;
+
 		menuBar.atCase("Bar width", "width");
 		menuBar.atCase("Filled string", "filled");
 		menuBar.atCase("Empty string", "empty");
 		menuBar.onContinue((key) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
+			const { bar } = gauge;
 			switch (key) {
 			case "width": {
-				this.#menuWidth.value(gauge.bar.width);
-				this.#menuWidth.bounds(1, 99);
-				return Transition.to(this.#menuWidth);
+				menuWidth.value(bar.width);
+				menuWidth.bounds(1, 99);
+				return Transition.to(menuWidth);
 			}
 			case "filled": {
-				this.#menuFilled.value(gauge.bar.filled);
-				return Transition.to(this.#menuFilled);
+				menuFilled.value(bar.filled);
+				return Transition.to(menuFilled);
 			}
 			case "empty": {
-				this.#menuEmpty.value(gauge.bar.empty);
-				return Transition.to(this.#menuEmpty);
+				menuEmpty.value(bar.empty);
+				return Transition.to(menuEmpty);
 			}
 			default: throw new TypeError(`Unknown bar key '${key}'`);
 			}
@@ -189,9 +195,8 @@ export class ConfigurationController extends Controller {
 	#buildWidth(settings: Settings): void {
 		this.#menuWidth.onContinue((width) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-			const [gauge] = gauges;
-			for (const gauge2 of gauges) {
-				gauge2.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
+			for (const gauge of gauges) {
+				gauge.bar.width = width;
 			}
 			return Transition.back;
 		});
@@ -200,9 +205,8 @@ export class ConfigurationController extends Controller {
 	#buildFilled(settings: Settings): void {
 		this.#menuFilled.onContinue((filled) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-			const [gauge] = gauges;
-			for (const gauge2 of gauges) {
-				gauge2.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
+			for (const gauge of gauges) {
+				gauge.bar.filled = filled;
 			}
 			return Transition.back;
 		});
@@ -211,9 +215,8 @@ export class ConfigurationController extends Controller {
 	#buildEmpty(settings: Settings): void {
 		this.#menuEmpty.onContinue((empty) => {
 			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-			const [target] = gauges;
 			for (const gauge of gauges) {
-				gauge.bar = new Bar(target.bar.width, target.bar.filled, empty);
+				gauge.bar.empty = empty;
 			}
 			return Transition.back;
 		});
