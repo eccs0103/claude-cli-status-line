@@ -24,6 +24,8 @@ export abstract class Transition {
 		return TerminationTransition.fail(message);
 	}
 
+	static to<V>(menu: Menu<V, void>, context: void): PathTransition<V, void>;
+	static to<V, C>(menu: Menu<V, C>, context: C): PathTransition<V, C>;
 	static to<V, C>(menu: Menu<V, C>, context: C): PathTransition<V, C> {
 		return new PathTransition(new Frame(menu, context));
 	}

@@ -13,7 +13,6 @@ export interface Router {
 	terminate(success: boolean, message: string): void;
 }
 //#endregion
-
 //#region Navigator
 export class Navigator implements Router {
 	#console: Console = new Console();
@@ -46,6 +45,8 @@ export class Navigator implements Router {
 		}
 	}
 
+	async launch<V>(title: string, menu: Menu<V, void>, context: void): Promise<void>;
+	async launch<V, C>(title: string, menu: Menu<V, C>, context: C): Promise<void>;
 	async launch<V, C>(title: string, menu: Menu<V, C>, context: C): Promise<void> {
 		await this.#console.session(() => this.#build(title, menu, context));
 	}
