@@ -2,12 +2,10 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds } from "../models/settings.js";
+import { BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
 import { InputCharacterMenu, InputNumberMenu, Menu, MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "../menu/index.js";
-
-const { stderr } = process;
 
 //#region Configuration controller
 export class ConfigurationController extends Controller {
@@ -40,17 +38,17 @@ export class ConfigurationController extends Controller {
 
 	#buildSettings(settings: Settings): void {
 		const menuSettings = this.#menuSettings;
-		menuSettings.title = "Settings";
 		const { segments } = settings;
+
 		const hasLabels = segments.some(segment => segment instanceof LabelSegment);
 		const hasGauges = segments.some(segment => segment instanceof GaugeSegment);
-
+		menuSettings.title = "Settings";
 		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
 		if (segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
 		if (hasLabels) menuSettings.atCase("Colors", this.#menuColors);
 		if (hasGauges) menuSettings.atCase("Thresholds", this.#menuThresholds);
 		if (hasGauges) menuSettings.atCase("Bar", this.#menuBar);
-		menuSettings.onContinue(menu => Transition.to(menu));
+		menuSettings.onContinue(Transition.to);
 		menuSettings.onCancel(() => Transition.to(this.#menuExit));
 	}
 
@@ -258,12 +256,12 @@ export class ConfigurationController extends Controller {
 
 	#buildExit(settings: Settings): void {
 		const menuExit = this.#menuExit;
-		menuExit.title = "Exit";
 
+		menuExit.title = "Exit";
 		menuExit.atCase("Save & exit", true);
 		menuExit.atCase("Discard changes", false);
 		menuExit.onContinue(async (save) => {
-			if (!save) return Transition.fail("Discarded");
+			if (!save) return Transition.success("Discarded");
 			await this.#service.write(settings);
 			return Transition.success("Saved");
 		});
@@ -288,10 +286,6 @@ export class ConfigurationController extends Controller {
 		this.#buildExit(settings);
 
 		await this.#navigator.launch("Status line", this.#menuSettings);
-	}
-
-	async catch(error: Error): Promise<void> {
-		stderr.write(`${error}\n`);
 	}
 }
 //#endregion

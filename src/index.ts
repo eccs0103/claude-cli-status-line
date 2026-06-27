@@ -2,12 +2,6 @@
 "use strict";
 
 import "adaptive-extender/node";
-import { ConfigurationController } from "./controllers/configuration-controller.js";
-import { StatusLineController } from "./controllers/status-line-controller.js";
+import { EntryController } from "./controllers/entry-controller.js";
 
-const [, , section] = process.argv;
-switch (section) {
-case undefined: await StatusLineController.launch(); break;
-case "config": await ConfigurationController.launch(); break;
-default: throw new TypeError(`Invalid '${section}' argument for section`);
-}
+await EntryController.launch<[]>();
