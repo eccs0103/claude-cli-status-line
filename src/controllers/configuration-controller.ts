@@ -27,6 +27,7 @@ export class ConfigurationController extends Controller {
 	#menuFilled: InputCharacterMenu = new InputCharacterMenu("Filled string");
 	#menuEmpty: InputCharacterMenu = new InputCharacterMenu("Empty string");
 	#navigator: Navigator = new Navigator();
+
 	#orderFirst: Segment = undefined!;
 	#editingColor: LabelSegment = undefined!;
 
