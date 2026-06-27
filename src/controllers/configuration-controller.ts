@@ -40,9 +40,9 @@ export class ConfigurationController extends Controller {
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
 	}
 
-	#gauges(settings: Settings): GaugeSegment[] {
-		return settings.segments.filter(segment => segment instanceof GaugeSegment);
-	}
+	// #gauges(settings: Settings): GaugeSegment[] {
+	// 	return settings.segments.filter(segment => segment instanceof GaugeSegment);
+	// }
 
 	#buildEnableSegments(settings: Settings): void {
 		const menuEnableSegments = this.#menuEnableSegments;
@@ -60,17 +60,24 @@ export class ConfigurationController extends Controller {
 		});
 	}
 
-	#buildOrderSegments(settings: Settings): void {
+	#buildOrderFirst(settings: Settings): void {
 		const menuOrderFirst = this.#menuOrderFirst;
-		const menuOrderSecond = this.#menuOrderSecond;
+
 		for (const segment of settings.segments) {
 			menuOrderFirst.atCase(ConfigurationController.#labelOf(segment), segment);
-			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
 		}
 		menuOrderFirst.onContinue((first) => {
 			this.#orderFirst = first;
-			return Transition.to(menuOrderSecond);
+			return Transition.to(this.#menuOrderSecond);
 		});
+	}
+
+	#buildOrderSecond(settings: Settings): void {
+		const menuOrderSecond = this.#menuOrderSecond;
+
+		for (const segment of settings.segments) {
+			menuOrderSecond.atCase(ConfigurationController.#labelOf(segment), segment);
+		}
 		menuOrderSecond.onContinue((second) => {
 			const first = this.#orderFirst;
 			const segments = [...settings.segments];
@@ -86,6 +93,7 @@ export class ConfigurationController extends Controller {
 	#buildColors(settings: Settings): void {
 		const menuColors = this.#menuColors;
 		const menuColorPick = this.#menuColorPick;
+
 		const labels = settings.segments.filter(segment => segment instanceof LabelSegment);
 		for (const segment of labels) {
 			menuColors.atCase(ConfigurationController.#labelOf(segment), segment);
@@ -95,6 +103,11 @@ export class ConfigurationController extends Controller {
 			menuColorPick.setInitial(segment.color);
 			return Transition.to(menuColorPick);
 		});
+	}
+
+	#buildColorPick(): void {
+		const menuColorPick = this.#menuColorPick;
+
 		for (const color of Object.values(Color)) {
 			menuColorPick.atCase(ColorSystem.paint(color, color), color);
 		}
@@ -106,35 +119,40 @@ export class ConfigurationController extends Controller {
 
 	#buildThresholds(settings: Settings): void {
 		const menuThresholds = this.#menuThresholds;
-		const menuWarn = this.#menuWarn;
-		const menuAlert = this.#menuAlert;
+
 		menuThresholds.atCase("Warn below %", "warn");
 		menuThresholds.atCase("Alert below %", "alert");
 		menuThresholds.onContinue((key) => {
-			const gauges = this.#gauges(settings);
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
 			case "warn":
-				menuWarn.value(gauge.thresholds.warn);
-				menuWarn.bounds(1, 99);
-				return Transition.to(menuWarn);
+				this.#menuWarn.value(gauge.thresholds.warn);
+				this.#menuWarn.bounds(1, 99);
+				return Transition.to(this.#menuWarn);
 			case "alert":
-				menuAlert.value(gauge.thresholds.alert);
-				menuAlert.bounds(1, gauge.thresholds.warn, true);
-				return Transition.to(menuAlert);
+				this.#menuAlert.value(gauge.thresholds.alert);
+				this.#menuAlert.bounds(1, gauge.thresholds.warn, true);
+				return Transition.to(this.#menuAlert);
 			default: throw new TypeError(`Unknown thresholds key '${key}'`);
 			}
 		});
-		menuWarn.onContinue((warn) => {
-			const gauges = this.#gauges(settings);
+	}
+
+	#buildWarn(settings: Settings): void {
+		this.#menuWarn.onContinue((warn) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.thresholds = new Thresholds(warn, gauge.thresholds.alert);
 			}
 			return Transition.back;
 		});
-		menuAlert.onContinue((alert) => {
-			const gauges = this.#gauges(settings);
+	}
+
+	#buildAlert(settings: Settings): void {
+		this.#menuAlert.onContinue((alert) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.thresholds = new Thresholds(gauge.thresholds.warn, alert);
@@ -145,50 +163,56 @@ export class ConfigurationController extends Controller {
 
 	#buildBar(settings: Settings): void {
 		const menuBar = this.#menuBar;
-		const menuWidth = this.#menuWidth;
-		const menuFilled = this.#menuFilled;
-		const menuEmpty = this.#menuEmpty;
 		menuBar.atCase("Bar width", "width");
 		menuBar.atCase("Filled string", "filled");
 		menuBar.atCase("Empty string", "empty");
 		menuBar.onContinue((key) => {
-			const gauges = this.#gauges(settings);
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			switch (key) {
 			case "width":
-				menuWidth.value(gauge.bar.width);
-				menuWidth.bounds(1, 99);
-				return Transition.to(menuWidth);
+				this.#menuWidth.value(gauge.bar.width);
+				this.#menuWidth.bounds(1, 99);
+				return Transition.to(this.#menuWidth);
 			case "filled":
-				menuFilled.value(gauge.bar.filled);
-				return Transition.to(menuFilled);
+				this.#menuFilled.value(gauge.bar.filled);
+				return Transition.to(this.#menuFilled);
 			case "empty":
-				menuEmpty.value(gauge.bar.empty);
-				return Transition.to(menuEmpty);
+				this.#menuEmpty.value(gauge.bar.empty);
+				return Transition.to(this.#menuEmpty);
 			default: throw new TypeError(`Unknown bar key '${key}'`);
 			}
 		});
-		menuWidth.onContinue((width) => {
-			const gauges = this.#gauges(settings);
+	}
+
+	#buildWidth(settings: Settings): void {
+		this.#menuWidth.onContinue((width) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.bar = new Bar(width, gauge.bar.filled, gauge.bar.empty);
 			}
 			return Transition.back;
 		});
-		menuFilled.onContinue((filled) => {
-			const gauges = this.#gauges(settings);
+	}
+
+	#buildFilled(settings: Settings): void {
+		this.#menuFilled.onContinue((filled) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
 			const [gauge] = gauges;
 			for (const gauge2 of gauges) {
 				gauge2.bar = new Bar(gauge.bar.width, filled, gauge.bar.empty);
 			}
 			return Transition.back;
 		});
-		menuEmpty.onContinue((empty) => {
-			const gauges = this.#gauges(settings);
-			const [gauge] = gauges;
-			for (const gauge2 of gauges) {
-				gauge2.bar = new Bar(gauge.bar.width, gauge.bar.filled, empty);
+	}
+
+	#buildEmpty(settings: Settings): void {
+		this.#menuEmpty.onContinue((empty) => {
+			const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+			const [target] = gauges;
+			for (const gauge of gauges) {
+				gauge.bar = new Bar(target.bar.width, target.bar.filled, empty);
 			}
 			return Transition.back;
 		});
@@ -223,15 +247,20 @@ export class ConfigurationController extends Controller {
 
 	async run(): Promise<void> {
 		const settings = await this.#service.read();
-
 		this.#buildEnableSegments(settings);
-		this.#buildOrderSegments(settings);
+		this.#buildOrderFirst(settings);
+		this.#buildOrderSecond(settings);
 		this.#buildColors(settings);
+		this.#buildColorPick();
 		this.#buildThresholds(settings);
+		this.#buildWarn(settings);
+		this.#buildAlert(settings);
 		this.#buildBar(settings);
+		this.#buildWidth(settings);
+		this.#buildFilled(settings);
+		this.#buildEmpty(settings);
 		this.#buildExit(settings);
 		this.#buildSettings(settings);
-
 		await this.#navigator.launch(this.#menuSettings);
 	}
 
