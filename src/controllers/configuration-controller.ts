@@ -14,7 +14,6 @@ export class ConfigurationController extends Controller {
 	#service: SettingsService = new SettingsService();
 	#menuSettings: SingleSelectionMenu<Menu> = new SingleSelectionMenu();
 	#menuEnableSegments: MultiSelectionMenu<Segment> = new MultiSelectionMenu();
-	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu();
 	#menuOrderFirst: SingleSelectionMenu<Segment> = new SingleSelectionMenu();
 	#menuOrderSecond: SingleSelectionMenu<Segment, Segment> = new SingleSelectionMenu();
 	#menuColors: SingleSelectionMenu<LabelSegment> = new SingleSelectionMenu();
@@ -26,6 +25,7 @@ export class ConfigurationController extends Controller {
 	#menuWidth: InputNumberMenu = new InputNumberMenu();
 	#menuFilled: InputCharacterMenu = new InputCharacterMenu();
 	#menuEmpty: InputCharacterMenu = new InputCharacterMenu();
+	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu();
 	#navigator: Navigator = new Navigator();
 
 	static #labelOf(segment: Segment): string {
@@ -36,6 +36,22 @@ export class ConfigurationController extends Controller {
 		if (segment instanceof FiveHourSegment) return "5-hour limit";
 		if (segment instanceof ContextSegment) return "Context";
 		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
+	}
+
+	#buildSettings(settings: Settings): void {
+		const menuSettings = this.#menuSettings;
+		menuSettings.title = "Settings";
+		const { segments } = settings;
+		const hasLabels = segments.some(segment => segment instanceof LabelSegment);
+		const hasGauges = segments.some(segment => segment instanceof GaugeSegment);
+
+		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
+		if (segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
+		if (hasLabels) menuSettings.atCase("Colors", this.#menuColors);
+		if (hasGauges) menuSettings.atCase("Thresholds", this.#menuThresholds);
+		if (hasGauges) menuSettings.atCase("Bar", this.#menuBar);
+		menuSettings.onContinue(menu => Transition.to(menu));
+		menuSettings.onCancel(() => Transition.to(this.#menuExit));
 	}
 
 	#buildEnableSegments(settings: Settings): void {
@@ -253,25 +269,10 @@ export class ConfigurationController extends Controller {
 		});
 	}
 
-	#buildSettings(settings: Settings): void {
-		const menuSettings = this.#menuSettings;
-		menuSettings.title = "Settings";
-		const { segments } = settings;
-		const hasLabels = segments.some(segment => segment instanceof LabelSegment);
-		const hasGauges = segments.some(segment => segment instanceof GaugeSegment);
-
-		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
-		if (segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
-		if (hasLabels) menuSettings.atCase("Colors", this.#menuColors);
-		if (hasGauges) menuSettings.atCase("Thresholds", this.#menuThresholds);
-		if (hasGauges) menuSettings.atCase("Bar", this.#menuBar);
-		menuSettings.onContinue(menu => Transition.to(menu));
-		menuSettings.onCancel(() => Transition.to(this.#menuExit));
-	}
-
 	async run(): Promise<void> {
 		const settings = await this.#service.read();
 
+		this.#buildSettings(settings);
 		this.#buildEnableSegments(settings);
 		this.#buildOrderFirst(settings);
 		this.#buildOrderSecond(settings);
@@ -285,7 +286,6 @@ export class ConfigurationController extends Controller {
 		this.#buildFilled(settings);
 		this.#buildEmpty(settings);
 		this.#buildExit(settings);
-		this.#buildSettings(settings);
 
 		await this.#navigator.launch("Status line", this.#menuSettings);
 	}
