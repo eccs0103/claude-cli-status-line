@@ -46,13 +46,15 @@ export class ConfigurationController extends Controller {
 
 	#buildEnableSegments(settings: Settings): void {
 		const menuEnableSegments = this.#menuEnableSegments;
-		for (const segment of settings.segments) {
+		const { segments } = settings;
+
+		for (const segment of segments) {
 			menuEnableSegments.atCase(ConfigurationController.#labelOf(segment), segment, segment.enabled);
 		}
 		menuEnableSegments.onContinue((chosen) => {
-			const { segments } = settings;
+			const set = new Set(chosen);
 			for (const segment of segments) {
-				segment.enabled = chosen.includes(segment);
+				segment.enabled = set.has(segment);
 			}
 			return Transition.back;
 		});
@@ -194,6 +196,7 @@ export class ConfigurationController extends Controller {
 
 	#buildExit(settings: Settings): void {
 		const menuExit = this.#menuExit;
+
 		menuExit.atCase("Save & exit", true);
 		menuExit.atCase("Discard changes", false);
 		menuExit.onContinue(async (save) => {
@@ -205,19 +208,22 @@ export class ConfigurationController extends Controller {
 
 	#buildSettings(settings: Settings): void {
 		const menuSettings = this.#menuSettings;
+		const { segments } = settings;
+		const hasLabels = segments.some(segment => segment instanceof LabelSegment);
+		const hasGauges = segments.some(segment => segment instanceof GaugeSegment);
+
 		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
-		if (settings.segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
-		if (settings.segments.some(segment => segment instanceof LabelSegment)) menuSettings.atCase("Colors", this.#menuColors);
-		if (settings.segments.some(segment => segment instanceof GaugeSegment)) {
-			menuSettings.atCase("Thresholds", this.#menuThresholds);
-			menuSettings.atCase("Bar", this.#menuBar);
-		}
-		menuSettings.onContinue((menu) => Transition.to(menu));
+		if (segments.length > 1) menuSettings.atCase("Order segments", this.#menuOrderFirst);
+		if (hasLabels) menuSettings.atCase("Colors", this.#menuColors);
+		if (hasGauges) menuSettings.atCase("Thresholds", this.#menuThresholds);
+		if (hasGauges) menuSettings.atCase("Bar", this.#menuBar);
+		menuSettings.onContinue(menu => Transition.to(menu));
 		menuSettings.onCancel(() => Transition.to(this.#menuExit));
 	}
 
 	async run(): Promise<void> {
 		const settings = await this.#service.read();
+
 		this.#buildEnableSegments(settings);
 		this.#buildOrderSegments(settings);
 		this.#buildColors(settings);
@@ -225,6 +231,7 @@ export class ConfigurationController extends Controller {
 		this.#buildBar(settings);
 		this.#buildExit(settings);
 		this.#buildSettings(settings);
+
 		await this.#navigator.launch(this.#menuSettings);
 	}
 
