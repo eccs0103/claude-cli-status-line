@@ -1,3 +1,9 @@
+## 1.2.0 (28.06.2026)
+- The `config` UI now reorders segments by swapping a pair — choose a first segment, then the one to swap it with — instead of picking each position in sequence.
+- In the `config` UI, the Thresholds and Bar editors now present each value (warn/alert; width, filled, empty) as its own menu entry you edit individually, instead of stepping through them all in one prompt run.
+- The `config` menu now hides options that don't apply — "Order segments" appears only with more than one segment, "Colors" only when a colored segment is present, and "Thresholds"/"Bar" only when a gauge segment is present.
+- The `config` menus now support consistent step-back navigation — Escape returns to the previous menu level throughout the UI.
+
 ## 1.1.2 (25.06.2026)
 - The status line now renders only when no argument is given; an unrecognized argument throws `Invalid '<arg>' argument for section` instead of silently rendering.
 - The `config` UI now requires a single character for the progress bar's filled and empty strings.
