@@ -14,6 +14,12 @@ export enum Color {
 	white = "white",
 }
 //#endregion
+//#region Time format
+export enum TimeFormat {
+	fractional = "fractional",
+	clock = "clock",
+}
+//#endregion
 //#region Thresholds
 export interface ThresholdsScheme {
 	warn: number;
@@ -343,20 +349,24 @@ export class Settings extends Model {
 	@Field(Array.Of(Segment), { name: "segments" })
 	segments: Segment[];
 
+	@Field(Enum.Of(TimeFormat), { name: "time_format" })
+	timeFormat: TimeFormat = TimeFormat.fractional;
+
 	constructor();
-	constructor(segments: Segment[]);
-	constructor(segments?: Segment[]) {
-		if (segments === undefined) {
+	constructor(segments: Segment[], timeFormat: TimeFormat);
+	constructor(segments?: Segment[], timeFormat?: TimeFormat) {
+		if (segments === undefined || timeFormat === undefined) {
 			super();
 			return;
 		}
 
 		super();
 		this.segments = segments;
+		this.timeFormat = timeFormat;
 	}
 
 	static get newDefault(): Settings {
-		return new Settings([DirectorySegment.newDefault, BranchSegment.newDefault, ModelSegment.newDefault, SevenDaySegment.newDefault, FiveHourSegment.newDefault, ContextSegment.newDefault]);
+		return new Settings([DirectorySegment.newDefault, BranchSegment.newDefault, ModelSegment.newDefault, SevenDaySegment.newDefault, FiveHourSegment.newDefault, ContextSegment.newDefault], TimeFormat.clock);
 	}
 }
 //#endregion

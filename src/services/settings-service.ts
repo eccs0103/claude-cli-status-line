@@ -8,12 +8,22 @@ import { Settings } from "../models/settings.js";
 
 //#region Settings service
 export class SettingsService {
-	static #directory: string = path.join(OperationSystem.homedir(), ".claude");
-	static #path: string = path.join(SettingsService.#directory, "status-line.config.json");
+	#directory: string;
+	#file: string;
+
+	constructor(isDevelopment: boolean) {
+		this.#directory = SettingsService.#readDirectory(isDevelopment);
+		this.#file = path.join(this.#directory, "status-line.config.json");
+	}
+
+	static #readDirectory(isDevelopment: boolean): string {
+		if (isDevelopment) return path.join(process.cwd(), "resources", "data");
+		return path.join(OperationSystem.homedir(), ".claude");
+	}
 
 	async read(): Promise<Settings> {
 		try {
-			const raw = await AsyncFileSystem.readFile(SettingsService.#path, "utf8");
+			const raw = await AsyncFileSystem.readFile(this.#file, "utf8");
 			return Settings.import(JSON.parse(raw), "settings");
 		} catch {
 			const settings = Settings.newDefault;
@@ -23,9 +33,9 @@ export class SettingsService {
 	}
 
 	async write(settings: Settings): Promise<void> {
-		await AsyncFileSystem.mkdir(SettingsService.#directory, { recursive: true });
+		await AsyncFileSystem.mkdir(this.#directory, { recursive: true });
 		const raw = JSON.stringify(Settings.export(settings), undefined, "\t");
-		await AsyncFileSystem.writeFile(SettingsService.#path, raw, "utf8");
+		await AsyncFileSystem.writeFile(this.#file, raw, "utf8");
 	}
 }
 //#endregion

@@ -49,6 +49,9 @@ export class StatusLineInput extends Model {
 	@Field(Optional.Of(Nullable.Of(Workspace)), { name: "workspace" })
 	workspace: Workspace | null | undefined;
 
+	@Field(Optional.Of(Nullable.Of(String)), { name: "git_branch" })
+	gitBranch: string | null | undefined;
+
 	@Field(Optional.Of(Nullable.Of(ModelInfo)), { name: "model" })
 	model: ModelInfo | null | undefined;
 

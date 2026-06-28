@@ -1,0 +1,59 @@
+{
+	"segments": [
+		{
+			"color": "cyan",
+			"enabled": true,
+			"$type": "DirectorySegment"
+		},
+		{
+			"color": "magenta",
+			"enabled": true,
+			"$type": "BranchSegment"
+		},
+		{
+			"color": "blue",
+			"enabled": true,
+			"$type": "ModelSegment"
+		},
+		{
+			"thresholds": {
+				"warn": 30,
+				"alert": 10
+			},
+			"bar": {
+				"width": 10,
+				"filled": "█",
+				"empty": "░"
+			},
+			"enabled": true,
+			"$type": "SevenDaySegment"
+		},
+		{
+			"thresholds": {
+				"warn": 30,
+				"alert": 10
+			},
+			"bar": {
+				"width": 10,
+				"filled": "█",
+				"empty": "░"
+			},
+			"enabled": true,
+			"$type": "FiveHourSegment"
+		},
+		{
+			"thresholds": {
+				"warn": 30,
+				"alert": 10
+			},
+			"bar": {
+				"width": 10,
+				"filled": "█",
+				"empty": "░"
+			},
+			"enabled": true,
+			"$type": "ContextSegment"
+		}
+	],
+	"time_format": "clock"
+}

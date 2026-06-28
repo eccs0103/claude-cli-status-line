@@ -9,14 +9,13 @@ import { InputService } from "../services/input-service.js";
 const { stdout } = process;
 
 //#region Status line controller
-export class StatusLineController extends Controller {
-	#serviceSettings: SettingsService = new SettingsService();
+export class StatusLineController extends Controller<[boolean]> {
 	#serviceInput: InputService = new InputService();
 
-	async run(): Promise<void> {
-		const serviceSettings = this.#serviceSettings;
+	async run(isDevelopment: boolean): Promise<void> {
 		const serviceInput = this.#serviceInput;
 
+		const serviceSettings = new SettingsService(isDevelopment);
 		const settings = await serviceSettings.read();
 		const input = await serviceInput.read();
 		const output = new StatusLine(input, settings).render();

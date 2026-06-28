@@ -2,6 +2,7 @@
 	"workspace": {
 		"current_dir": "/home/user/my_project"
 	},
+	"git_branch": "main",
 	"model": {
 		"display_name": "Sonnet 4.6"
 	},

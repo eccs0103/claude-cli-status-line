@@ -10,12 +10,12 @@ const { argv, stderr } = process;
 //#region Entry controller
 export class EntryController extends Controller {
 	async run(): Promise<void> {
-		const [, , section] = argv;
-		switch (section) {
-		case undefined: return await StatusLineController.launch();
-		case "config": return await ConfigurationController.launch();
-		default: throw new TypeError(`Invalid '${section}' argument for section`);
-		}
+		const parameters = new Set(argv.slice(2));
+		const isConfiguration = parameters.has("config");
+		const isDevelopment = parameters.has("--dev");
+
+		if (isConfiguration) return await ConfigurationController.launch(isDevelopment);
+		return await StatusLineController.launch(isDevelopment);
 	}
 
 	async catch(error: Error): Promise<void> {
