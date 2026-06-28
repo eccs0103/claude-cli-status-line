@@ -1,6 +1,6 @@
 {
 	"name": "@eccs0103/claude-cli-status-line",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"description": "Claude CLI status line command that renders workspace, git branch, model, rate limits and context window as an ANSI-colored line",
 	"type": "module",
 	"private": false,

@@ -46,4 +46,4 @@ Color thresholds: green (>30%), yellow (10–30%), red (≤10%).
 claude-cli-status-line config
 ```
 
-Lets you toggle segments, reorder them, change colors, adjust thresholds, and customize the progress bar. Settings are saved to `~/.claude/status-line.config.json`.
+Lets you toggle segments, reorder them, change colors, adjust thresholds, customize the progress bar, choose the countdown time format, and reset to defaults. Settings are saved to `~/.claude/status-line.config.json`.

@@ -1,3 +1,10 @@
+## 1.3.0 (28.06.2026)
+- Added a "Time format" option to `config` — choose how rate-limit countdowns display: clock (e.g. `12h 46m`) or fractional (e.g. `0.5/7 d`).
+- Added a "Reset to defaults" option to `config` that restores and saves the default settings.
+- The `config` Colors menu now shows each segment's current color, and the Thresholds and Bar menus show each current value inline (e.g. `Warn below 30%`, `Width · 10`).
+- Rate-limit countdowns now render in clock format by default (`for 12h 46m`) instead of the fractional `for 0.5/7 d`.
+- An unrecognized command argument is now ignored (the status line renders) instead of throwing `Invalid '<arg>' argument for section`.
+
 ## 1.2.0 (28.06.2026)
 - The `config` UI now reorders segments by swapping a pair — choose a first segment, then the one to swap it with — instead of picking each position in sequence.
 - In the `config` UI, the Thresholds and Bar editors now present each value (warn/alert; width, filled, empty) as its own menu entry you edit individually, instead of stepping through them all in one prompt run.
