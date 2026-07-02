@@ -5,7 +5,7 @@ import { Controller } from "adaptive-extender/node";
 import { BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, TimeFormat } from "../models/settings.js";
 import { ColorSystem } from "../services/color-system.js";
 import { SettingsService } from "../services/settings-service.js";
-import { InputCharacterMenu, InputNumberMenu, Menu, MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "../menu/index.js";
+import { InputCharacterMenu, InputNumberMenu, Menu, MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "cli-navigator";
 
 //#region Configuration controller
 export class ConfigurationController extends Controller<[boolean]> {
@@ -24,7 +24,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#menuTimeFormat: SingleSelectionMenu<TimeFormat> = new SingleSelectionMenu();
 	#menuReset: SingleSelectionMenu<boolean> = new SingleSelectionMenu();
 	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu();
-	#navigator: Navigator = new Navigator();
+	#navigator: Navigator = new Navigator({ notice: "Run 'claude-cli-status-line config' in an interactive terminal." });
 
 	static #labelOf(segment: Segment): string {
 		if (segment instanceof DirectorySegment) return "Directory";

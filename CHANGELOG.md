@@ -1,3 +1,7 @@
+## 1.3.2 (02.07.2026)
+- `adaptive-extender` upgraded from `0.12.0` to `1.0.3`.
+- License changed from MIT to Apache-2.0.
+
 ## 1.3.1 (30.06.2026)
 - Added a "Time format" option to `config` — choose how rate-limit countdowns display: clock (e.g. `12h 46m`) or fractional (e.g. `0.5/7 d`).
 - Added a "Reset to defaults" option to `config` that restores and saves the default settings.
