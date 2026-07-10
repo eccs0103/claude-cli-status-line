@@ -13,12 +13,24 @@ const { round, max, trunc } = Math;
 export class StatusLine {
 	static #SEPARATOR: string = ` ${ColorSystem.paint(" ", Style.dim)} `;
 
-	#input: StatusLineInput;
-	#settings: Settings;
+	#folder: string | null;
+	#branch: string | null;
+	#agent: string | null;
+	#rateLimits: RateLimits | null;
+	#usedPercentage: number | null;
+	#timeFormat: TimeFormat;
 
 	constructor(input: StatusLineInput, settings: Settings) {
-		this.#input = input;
-		this.#settings = settings;
+		const { workspace, gitBranch, model, rateLimits, contextWindow } = input;
+		const { segments, timeFormat } = settings;
+
+		const path = workspace?.currentDir ?? null;
+		this.#folder = path?.split(/[\\/]/).filter(Boolean).at(-1) ?? null;
+		this.#branch = StatusLine.#resolveBranch(gitBranch, path);
+		this.#agent = model?.displayName ?? null;
+		this.#rateLimits = rateLimits ?? null;
+		this.#usedPercentage = contextWindow?.usedPercentage ?? null;
+		this.#timeFormat = timeFormat;
 	}
 
 	static #colorOf(available: number, thresholds: Thresholds): Color {
@@ -95,18 +107,10 @@ export class StatusLine {
 	}
 
 	render(): string {
-		const { workspace, model, rateLimits, gitBranch } = this.#input;
-		const { segments, timeFormat } = this.#settings;
-
-		const path = workspace?.currentDir ?? null;
-		const folder = path?.split(/[\\/]/).filter(Boolean).at(-1) ?? null;
-		const branch = StatusLine.#resolveBranch(gitBranch, path);
-		const agent = model?.displayName ?? null;
-
 		const result: string[] = [];
 		for (const segment of segments) {
 			if (!segment.enabled) continue;
-			const rendered = this.#renderSegment(segment, folder, branch, agent, rateLimits, timeFormat);
+			const rendered = this.#renderSegment(segment);
 			if (rendered === null) continue;
 			result.push(rendered);
 		}
