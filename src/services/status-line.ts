@@ -37,18 +37,18 @@ export class StatusLine {
 		return `${ColorSystem.paint(this.#makeBar(available, bar), color)} ${ColorSystem.paint(`${available}%`, color)}`;
 	}
 
-	static #formatClock(seconds: number): string {
-		const span = Timespan.fromValue(seconds * 1000);
+	static #makeClock(seconds: number): string {
+		const { days, hours, minutes } = Timespan.fromValue(seconds * 1000);
 		const parts: string[] = [];
-		if (span.days > 0) parts.push(`${span.days}d`);
-		if (span.hours > 0) parts.push(`${span.hours}h`);
-		if (span.minutes > 0) parts.push(`${span.minutes}m`);
+		if (days > 0) parts.push(`${days}d`);
+		if (hours > 0) parts.push(`${hours}h`);
+		if (minutes > 0) parts.push(`${minutes}m`);
 		return parts.slice(0, 2).join(" ").insteadEmpty("0m");
 	}
 
 	static #renderCountdown(resetsAt: number, divisor: number, label: string, format: TimeFormat): string {
 		const seconds = max(0, resetsAt - trunc(Date.now() / 1000));
-		if (format === TimeFormat.clock) return ` ${ColorSystem.paint(`for ${StatusLine.#formatClock(seconds)}`, Style.dim)}`;
+		if (format === TimeFormat.clock) return ` ${ColorSystem.paint(`for ${StatusLine.#makeClock(seconds)}`, Style.dim)}`;
 		const value = (seconds / divisor).toFixed(1).replace(/\.0$/, String.empty);
 		return ` ${ColorSystem.paint(`for ${value}/${label}`, Style.dim)}`;
 	}
