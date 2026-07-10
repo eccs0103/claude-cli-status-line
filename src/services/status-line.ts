@@ -66,10 +66,10 @@ export class StatusLine {
 		return `${this.#renderAvailability(available, thresholds, bar)} ${ColorSystem.paint("#", Style.dim)}`;
 	}
 
-	static #readBranch(directory: string): string | null {
+	static #readBranch(path: string): string | null {
 		try {
 			const stdio: StdioOptions = ["pipe", "pipe", "pipe"];
-			return execSync(`git -C "${directory.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio })
+			return execSync(`git -C "${path.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio })
 				.toString()
 				.trim()
 				.insteadEmpty(null);
@@ -78,10 +78,10 @@ export class StatusLine {
 		}
 	}
 
-	static #resolveBranch(branch: string | null | undefined, directory: string | null): string | null {
+	static #resolveBranch(branch: string | null | undefined, path: string | null): string | null {
 		if (branch != null) return branch;
-		if (directory === null) return null;
-		return StatusLine.#readBranch(directory);
+		if (path === null) return null;
+		return StatusLine.#readBranch(path);
 	}
 
 	#renderSegment(segment: Segment, folder: string | null, branch: string | null, agent: string | null, rateLimits: RateLimits | null | undefined, format: TimeFormat): string | null {
@@ -95,12 +95,12 @@ export class StatusLine {
 	}
 
 	render(): string {
-		const { workspace, model, rateLimits } = this.#input;
+		const { workspace, model, rateLimits, gitBranch } = this.#input;
 		const { segments, timeFormat } = this.#settings;
 
-		const directory = workspace?.currentDir ?? null;
-		const folder = directory?.split(/[\\/]/).filter(Boolean).at(-1) ?? null;
-		const branch = StatusLine.#resolveBranch(this.#input.gitBranch, directory);
+		const path = workspace?.currentDir ?? null;
+		const folder = path?.split(/[\\/]/).filter(Boolean).at(-1) ?? null;
+		const branch = StatusLine.#resolveBranch(gitBranch, path);
 		const agent = model?.displayName ?? null;
 
 		const result: string[] = [];
