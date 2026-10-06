@@ -4,4 +4,4 @@ node_modules
 *.log
 *.test.*
 src/
-*tsconfig.json
+*tsconfig*.json
