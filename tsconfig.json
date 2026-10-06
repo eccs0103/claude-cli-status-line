@@ -1,36 +1,10 @@
 {
+	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
-		/* Language & Environment */
-		"target": "ES2022",
-		"module": "ESNext",
-		"lib": ["ES2022"],
-		"types": ["node"],
-		"useDefineForClassFields": true,
-
-		/* Module Resolution */
-		"moduleResolution": "bundler",
-		"moduleDetection": "force",
-		"verbatimModuleSyntax": true,
-
-		/* Interop */
-		"esModuleInterop": true,
-		"allowJs": false,
-		"skipLibCheck": false,
-
-		/* Emit */
-		"declaration": false,
-		"sourceMap": false,
-		"rootDir": "src",
-		"outDir": "dist",
-
-		/* Type Checking */
-		"strict": true,
-		"strictPropertyInitialization": false,
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-
-		/* Misc */
-		"forceConsistentCasingInFileNames": true,
+		"lib": [ "ES2025", "ESNext.Decorators" ],
+		"types": [ "node" ],
+		"rootDir": "./src",
+		"outDir": "./dist"
 	},
-	"include": ["src/**/*.ts"],
+	"include": [ "src/**/*.ts" ],
 }

@@ -2,10 +2,10 @@
 
 import "adaptive-extender/node";
 import { Controller } from "adaptive-extender/node";
-import { BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, GaugeSegment, LabelSegment, ModelSegment, type Segment, SevenDaySegment, Settings, TimeFormat } from "../models/settings.js";
-import { ColorSystem } from "../services/color-system.js";
-import { SettingsService } from "../services/settings-service.js";
 import { InputCharacterMenu, InputNumberMenu, Menu, MultiSelectionMenu, Navigator, SingleSelectionMenu, Transition } from "cli-navigator";
+import { Color, type LabelSegment, type Segment, Settings, TimeFormat } from "../models/settings.js";
+import { ColorSystem } from "../view/color-system.js";
+import { SettingsService } from "../services/settings-service.js";
 
 //#region Configuration controller
 export class ConfigurationController extends Controller<[boolean]> {
@@ -26,23 +26,13 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#menuExit: SingleSelectionMenu<boolean> = new SingleSelectionMenu();
 	#navigator: Navigator = new Navigator({ notice: "Run 'claude-cli-status-line config' in an interactive terminal." });
 
-	static #labelOf(segment: Segment): string {
-		if (segment instanceof DirectorySegment) return "Directory";
-		if (segment instanceof BranchSegment) return "Branch";
-		if (segment instanceof ModelSegment) return "Model";
-		if (segment instanceof SevenDaySegment) return "7-day limit";
-		if (segment instanceof FiveHourSegment) return "5-hour limit";
-		if (segment instanceof ContextSegment) return "Context";
-		throw new TypeError(`Unknown segment type '${typename(segment)}'`);
-	}
-
 	#buildOrder(settings: Settings, held: Segment | null): SingleSelectionMenu<Segment> {
 		const menuOrder: SingleSelectionMenu<Segment> = new SingleSelectionMenu();
 		const { segments } = settings;
 
 		menuOrder.title = "Order segments";
 		for (const segment of segments) {
-			const label = ConfigurationController.#labelOf(segment);
+			const { label } = segment;
 			if (segment === held) {
 				menuOrder.atCase(ColorSystem.paint(label, Color.green), segment);
 				continue;
@@ -52,10 +42,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 		if (held !== null) menuOrder.initial = held;
 		menuOrder.onContinue((chosen) => {
 			if (held === null) return Transition.to(this.#buildOrder(settings, chosen));
-			const index1 = segments.indexOf(held);
-			const index2 = segments.indexOf(chosen);
-			segments[index1] = chosen;
-			segments[index2] = held;
+			settings.swap(held, chosen);
 			return Transition.to(this.#buildOrder(settings, null));
 		});
 		return menuOrder;
@@ -65,8 +52,8 @@ export class ConfigurationController extends Controller<[boolean]> {
 		const menuSettings = this.#menuSettings;
 		const { segments } = settings;
 
-		const hasLabels = segments.some(segment => segment instanceof LabelSegment);
-		const hasGauges = segments.some(segment => segment instanceof GaugeSegment);
+		const hasLabels = settings.labels.length > 0;
+		const hasGauges = settings.gauges.length > 0;
 		menuSettings.title = "Settings";
 		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
 		if (segments.length > 1) menuSettings.atCase("Order segments", this.#buildOrder(settings, null));
@@ -85,7 +72,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 
 		menuEnableSegments.title = "Enable segments";
 		for (const segment of segments) {
-			menuEnableSegments.atCase(ConfigurationController.#labelOf(segment), segment, segment.enabled);
+			menuEnableSegments.atCase(segment.label, segment, segment.enabled);
 		}
 		menuEnableSegments.onContinue((chosen) => {
 			const set = new Set(chosen);
@@ -101,9 +88,8 @@ export class ConfigurationController extends Controller<[boolean]> {
 		const menuColorPick = this.#menuColorPick;
 
 		menuColors.title = "Colors";
-		const labels = settings.segments.filter(segment => segment instanceof LabelSegment);
-		for (const segment of labels) {
-			menuColors.atCase(`${ConfigurationController.#labelOf(segment)} · ${ColorSystem.paint(String(segment.color), segment.color)}`, segment);
+		for (const segment of settings.labels) {
+			menuColors.atCase(`${segment.label} · ${ColorSystem.paint(String(segment.color), segment.color)}`, segment);
 		}
 		menuColors.onContinue((segment) => {
 			menuColorPick.initial = segment.color;
@@ -129,8 +115,8 @@ export class ConfigurationController extends Controller<[boolean]> {
 		const menuWarn = this.#menuWarn;
 		const menuAlert = this.#menuAlert;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-		const [gauge] = gauges;
+		const gauge = settings.gauges.at(0);
+		if (gauge === undefined) return;
 		const { thresholds } = gauge;
 		menuThresholds.title = "Thresholds";
 		menuThresholds.atCase(`Warn below ${thresholds.warn}%`, "warn");
@@ -158,7 +144,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#buildWarn(settings: Settings): void {
 		const menuWarn = this.#menuWarn;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+		const { gauges } = settings;
 		menuWarn.title = "Warn below %";
 		menuWarn.onContinue((warn) => {
 			for (const gauge of gauges) {
@@ -171,7 +157,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#buildAlert(settings: Settings): void {
 		const menuAlert = this.#menuAlert;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+		const { gauges } = settings;
 		menuAlert.title = "Alert below %";
 		menuAlert.onContinue((alert) => {
 			for (const gauge of gauges) {
@@ -187,8 +173,8 @@ export class ConfigurationController extends Controller<[boolean]> {
 		const menuFilled = this.#menuFilled;
 		const menuEmpty = this.#menuEmpty;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
-		const [gauge] = gauges;
+		const gauge = settings.gauges.at(0);
+		if (gauge === undefined) return;
 		const { bar } = gauge;
 		menuBar.title = "Bar";
 		menuBar.atCase(`Width · ${bar.width}`, "width");
@@ -218,7 +204,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#buildWidth(settings: Settings): void {
 		const menuWidth = this.#menuWidth;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+		const { gauges } = settings;
 		menuWidth.title = "Bar width";
 		menuWidth.onContinue((width) => {
 			for (const gauge of gauges) {
@@ -231,7 +217,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#buildFilled(settings: Settings): void {
 		const menuFilled = this.#menuFilled;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+		const { gauges } = settings;
 		menuFilled.title = "Filled string";
 		menuFilled.onContinue((filled) => {
 			for (const gauge of gauges) {
@@ -244,7 +230,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#buildEmpty(settings: Settings): void {
 		const menuEmpty = this.#menuEmpty;
 
-		const gauges = settings.segments.filter(segment => segment instanceof GaugeSegment);
+		const { gauges } = settings;
 		menuEmpty.title = "Empty string";
 		menuEmpty.onContinue((empty) => {
 			for (const gauge of gauges) {

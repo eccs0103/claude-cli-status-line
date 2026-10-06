@@ -11,9 +11,9 @@ export enum Style {
 //#endregion
 //#region Color system
 export abstract class ColorSystem {
-	static #RESET: string = "\x1b[0m";
+	static #reset: string = "\x1b[0m";
 
-	static #CODES: Map<Color | Style, string> = new Map<Color | Style, string>([
+	static #codes: Map<Color | Style, string> = new Map<Color | Style, string>([
 		[Color.cyan, "\x1b[36m"],
 		[Color.magenta, "\x1b[35m"],
 		[Color.blue, "\x1b[34m"],
@@ -32,8 +32,9 @@ export abstract class ColorSystem {
 	static paint(text: string, color: Color): string;
 	static paint(text: string, style: Style): string;
 	static paint(text: string, token: Color | Style): string {
-		const reset = ColorSystem.#RESET;
-		return `${ColorSystem.#CODES.get(token) ?? reset}${text}${reset}`;
+		const code = ColorSystem.#codes.get(token);
+		if (code === undefined) throw new TypeError(`Unknown '${token}' token`);
+		return `${code}${text}${ColorSystem.#reset}`;
 	}
 }
 //#endregion

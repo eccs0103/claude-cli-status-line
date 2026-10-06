@@ -3,6 +3,8 @@
 import "adaptive-extender/node";
 import { Deferred, Descendant, Enum, Field, Model } from "adaptive-extender/node";
 
+const { round } = Math;
+
 //#region Color
 export enum Color {
 	cyan = "cyan",
@@ -49,6 +51,12 @@ export class Thresholds extends Model {
 	static get newDefault(): Thresholds {
 		return new Thresholds(30, 10);
 	}
+
+	color(available: number): Color {
+		if (available <= this.alert) return Color.red;
+		if (available <= this.warn) return Color.yellow;
+		return Color.green;
+	}
 }
 //#endregion
 //#region Bar
@@ -85,6 +93,12 @@ export class Bar extends Model {
 	static get newDefault(): Bar {
 		return new Bar(10, "█", "░");
 	}
+
+	draw(percent: number): string {
+		const { width } = this;
+		const count = round((percent / 100 * width).clamp(0, width));
+		return this.filled.repeat(count) + this.empty.repeat(width - count);
+	}
 }
 //#endregion
 
@@ -120,6 +134,8 @@ export abstract class Segment extends Model {
 		super();
 		this.enabled = enabled;
 	}
+
+	abstract get label(): string;
 }
 //#endregion
 
@@ -204,6 +220,8 @@ export class DirectorySegment extends LabelSegment {
 		super(enabled, color);
 	}
 
+	get label(): string { return "Directory"; }
+
 	static get newDefault(): DirectorySegment {
 		return new DirectorySegment(true, Color.cyan);
 	}
@@ -229,6 +247,8 @@ export class BranchSegment extends LabelSegment {
 
 		super(enabled, color);
 	}
+
+	get label(): string { return "Branch"; }
 
 	static get newDefault(): BranchSegment {
 		return new BranchSegment(true, Color.magenta);
@@ -256,6 +276,8 @@ export class ModelSegment extends LabelSegment {
 		super(enabled, color);
 	}
 
+	get label(): string { return "Model"; }
+
 	static get newDefault(): ModelSegment {
 		return new ModelSegment(true, Color.blue);
 	}
@@ -281,6 +303,8 @@ export class SevenDaySegment extends GaugeSegment {
 
 		super(enabled, thresholds, bar);
 	}
+
+	get label(): string { return "7-day limit"; }
 
 	static get newDefault(): SevenDaySegment {
 		return new SevenDaySegment(true, Thresholds.newDefault, Bar.newDefault);
@@ -308,6 +332,8 @@ export class FiveHourSegment extends GaugeSegment {
 		super(enabled, thresholds, bar);
 	}
 
+	get label(): string { return "5-hour limit"; }
+
 	static get newDefault(): FiveHourSegment {
 		return new FiveHourSegment(true, Thresholds.newDefault, Bar.newDefault);
 	}
@@ -333,6 +359,8 @@ export class ContextSegment extends GaugeSegment {
 
 		super(enabled, thresholds, bar);
 	}
+
+	get label(): string { return "Context"; }
 
 	static get newDefault(): ContextSegment {
 		return new ContextSegment(true, Thresholds.newDefault, Bar.newDefault);
@@ -363,6 +391,23 @@ export class Settings extends Model {
 		super();
 		this.segments = segments;
 		this.timeFormat = timeFormat;
+	}
+
+	get labels(): LabelSegment[] {
+		return this.segments.filter(segment => segment instanceof LabelSegment);
+	}
+
+	get gauges(): GaugeSegment[] {
+		return this.segments.filter(segment => segment instanceof GaugeSegment);
+	}
+
+	swap(segment: Segment, segment2: Segment): void {
+		const { segments } = this;
+		const index = segments.indexOf(segment);
+		const index2 = segments.indexOf(segment2);
+		if (index < 0 || index2 < 0) throw new ReferenceError("Segment is not part of the settings");
+		segments[index] = segment2;
+		segments[index2] = segment;
 	}
 
 	static get newDefault(): Settings {

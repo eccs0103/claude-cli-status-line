@@ -1,9 +1,9 @@
 "use strict";
 
 import "adaptive-extender/node";
+import { Controller } from "adaptive-extender/node";
 import { ConfigurationController } from "./configuration-controller.js";
 import { StatusLineController } from "./status-line-controller.js";
-import { Controller } from "adaptive-extender/node";
 
 const { argv, stderr } = process;
 
