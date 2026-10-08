@@ -3,7 +3,7 @@
 import "adaptive-extender/node";
 import { Field, Model, Nullable } from "adaptive-extender/node";
 
-const { round } = Math;
+const { round, trunc } = Math;
 
 //#region Workspace
 export interface WorkspaceScheme {
@@ -148,6 +148,88 @@ export class ContextWindow extends Model {
 }
 //#endregion
 
+//#region Prompt cache
+export interface PromptCacheScheme {
+	warm: boolean | null;
+	expires_at: number | null;
+}
+
+export class PromptCache extends Model {
+	@Field(Nullable.Of(Boolean), { name: "warm" })
+	warm: boolean | null = null;
+
+	@Field(Nullable.Of(Number), { name: "expires_at" })
+	expiry: number | null = null;
+
+	constructor();
+	constructor(warm: boolean | null, expiry: number | null);
+	constructor(warm?: boolean | null, expiry?: number | null) {
+		if (warm === undefined || expiry === undefined) {
+			super();
+			return;
+		}
+
+		super();
+		this.warm = warm;
+		this.expiry = expiry;
+	}
+
+	get remaining(): number | null {
+		const { warm, expiry } = this;
+		if (warm !== true || expiry === null) return null;
+		const seconds = expiry - trunc(Date.now() / 1000);
+		if (seconds <= 0) return null;
+		return seconds;
+	}
+}
+//#endregion
+
+//#region Effort
+export interface EffortScheme {
+	level: string | null;
+}
+
+export class Effort extends Model {
+	@Field(Nullable.Of(String), { name: "level" })
+	level: string | null = null;
+
+	constructor();
+	constructor(level: string | null);
+	constructor(level?: string | null) {
+		if (level === undefined) {
+			super();
+			return;
+		}
+
+		super();
+		this.level = level;
+	}
+}
+//#endregion
+
+//#region Worktree
+export interface WorktreeScheme {
+	branch: string | null;
+}
+
+export class Worktree extends Model {
+	@Field(Nullable.Of(String), { name: "branch" })
+	branch: string | null = null;
+
+	constructor();
+	constructor(branch: string | null);
+	constructor(branch?: string | null) {
+		if (branch === undefined) {
+			super();
+			return;
+		}
+
+		super();
+		this.branch = branch;
+	}
+}
+//#endregion
+
 //#region Status line input
 export interface StatusLineInputScheme {
 	workspace: WorkspaceScheme | null;
@@ -155,6 +237,10 @@ export interface StatusLineInputScheme {
 	model: ModelInfoScheme | null;
 	rate_limits: RateLimitsScheme | null;
 	context_window: ContextWindowScheme | null;
+	prompt_cache: PromptCacheScheme | null;
+	effort: EffortScheme | null;
+	fast_mode: boolean | null;
+	worktree: WorktreeScheme | null;
 }
 
 export class StatusLineInput extends Model {
@@ -173,10 +259,22 @@ export class StatusLineInput extends Model {
 	@Field(Nullable.Of(ContextWindow), { name: "context_window" })
 	context: ContextWindow | null = null;
 
+	@Field(Nullable.Of(PromptCache), { name: "prompt_cache" })
+	cache: PromptCache | null = null;
+
+	@Field(Nullable.Of(Effort), { name: "effort" })
+	effort: Effort | null = null;
+
+	@Field(Nullable.Of(Boolean), { name: "fast_mode" })
+	fast: boolean | null = null;
+
+	@Field(Nullable.Of(Worktree), { name: "worktree" })
+	worktree: Worktree | null = null;
+
 	constructor();
-	constructor(workspace: Workspace | null, branch: string | null, model: ModelInfo | null, limits: RateLimits | null, context: ContextWindow | null);
-	constructor(workspace?: Workspace | null, branch?: string | null, model?: ModelInfo | null, limits?: RateLimits | null, context?: ContextWindow | null) {
-		if (workspace === undefined || branch === undefined || model === undefined || limits === undefined || context === undefined) {
+	constructor(workspace: Workspace | null, branch: string | null, model: ModelInfo | null, limits: RateLimits | null, context: ContextWindow | null, cache: PromptCache | null, effort: Effort | null, fast: boolean | null, worktree: Worktree | null);
+	constructor(workspace?: Workspace | null, branch?: string | null, model?: ModelInfo | null, limits?: RateLimits | null, context?: ContextWindow | null, cache?: PromptCache | null, effort?: Effort | null, fast?: boolean | null, worktree?: Worktree | null) {
+		if (workspace === undefined || branch === undefined || model === undefined || limits === undefined || context === undefined || cache === undefined || effort === undefined || fast === undefined || worktree === undefined) {
 			super();
 			return;
 		}
@@ -187,6 +285,10 @@ export class StatusLineInput extends Model {
 		this.model = model;
 		this.limits = limits;
 		this.context = context;
+		this.cache = cache;
+		this.effort = effort;
+		this.fast = fast;
+		this.worktree = worktree;
 	}
 }
 //#endregion

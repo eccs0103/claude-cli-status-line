@@ -4,7 +4,7 @@
 	},
 	"git_branch": "main",
 	"model": {
-		"display_name": "Sonnet 4.6"
+		"display_name": "Opus 5.5"
 	},
 	"rate_limits": {
 		"seven_day": {
@@ -18,5 +18,16 @@
 	},
 	"context_window": {
 		"used_percentage": 75
+	},
+	"prompt_cache": {
+		"warm": true,
+		"expires_at": 1800000000
+	},
+	"effort": {
+		"level": "high"
+	},
+	"fast_mode": true,
+	"worktree": {
+		"branch": "main"
 	}
 }

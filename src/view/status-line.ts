@@ -3,8 +3,8 @@
 import "adaptive-extender/node";
 import ChildProcess, { type StdioOptions } from "node:child_process";
 import { Timespan } from "adaptive-extender/node";
-import { Bar, BranchSegment, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds, TimeFormat } from "../models/settings.js";
-import { type ContextWindow, type RateLimit, type StatusLineInput } from "../models/status-line-input.js";
+import { Bar, BranchSegment, Color, ContextSegment, DirectorySegment, FiveHourSegment, ModelSegment, type Segment, SevenDaySegment, Settings, Thresholds, TimeFormat } from "../models/settings.js";
+import { type ContextWindow, type Effort, type PromptCache, type RateLimit, type StatusLineInput } from "../models/status-line-input.js";
 import { ColorSystem, Style } from "./color-system.js";
 
 const { max, trunc } = Math;
@@ -50,11 +50,32 @@ export class StatusLine {
 		return StatusLine.#renderAvailability(available, thresholds, bar) + countdown;
 	}
 
-	static #renderContextWindow(context: ContextWindow | null, thresholds: Thresholds, bar: Bar): string | null {
+	static #drawCache(cache: PromptCache | null): string | null {
+		if (cache === null) return null;
+		const { remaining } = cache;
+		if (remaining === null) return ColorSystem.paint("cold", Color.red);
+		return ColorSystem.paint(StatusLine.#formatClock(remaining), Style.dim);
+	}
+
+	static #renderContextWindow(context: ContextWindow | null, cache: PromptCache | null, segment: ContextSegment): string | null {
 		if (context === null) return null;
 		const { available } = context;
 		if (available === null) return null;
-		return `${StatusLine.#renderAvailability(available, thresholds, bar)} ${ColorSystem.paint("#", Style.dim)}`;
+		const gauge = `${StatusLine.#renderAvailability(available, segment.thresholds, segment.bar)} ${ColorSystem.paint("#", Style.dim)}`;
+		const tail = segment.cache ? StatusLine.#drawCache(cache) : null;
+		if (tail === null) return gauge;
+		return `${gauge} ${tail}`;
+	}
+
+	static #drawModel(agent: string | null, effort: Effort | null, fast: boolean | null, segment: ModelSegment): string | null {
+		if (agent === null) return null;
+		const { color } = segment;
+		if (!segment.effort) return ColorSystem.paint(agent, color);
+		const level = effort?.level ?? null;
+		let text = agent;
+		if (level !== null) text += ` (${level})`;
+		if (fast === true) text += "⚡";
+		return ColorSystem.paint(text, color);
 	}
 
 	static #readBranch(directory: string): string | null {
@@ -73,23 +94,24 @@ export class StatusLine {
 	}
 
 	#renderSegment(segment: Segment, folder: string | null, branch: string | null, agent: string | null, format: TimeFormat): string | null {
-		const { limits, context } = this.#input;
+		const { limits, context, cache, effort, fast } = this.#input;
 		if (segment instanceof DirectorySegment) return folder !== null ? ColorSystem.paint(ColorSystem.paint(folder, Style.bold), segment.color) : null;
 		if (segment instanceof BranchSegment) return branch !== null ? ColorSystem.paint(branch, segment.color) : null;
-		if (segment instanceof ModelSegment) return agent !== null ? ColorSystem.paint(agent, segment.color) : null;
+		if (segment instanceof ModelSegment) return StatusLine.#drawModel(agent, effort, fast, segment);
 		if (segment instanceof SevenDaySegment) return StatusLine.#renderRateLimit(limits?.sevenDay ?? null, 86_400, "7 d", segment.thresholds, segment.bar, format);
 		if (segment instanceof FiveHourSegment) return StatusLine.#renderRateLimit(limits?.fiveHour ?? null, 3_600, "5 h", segment.thresholds, segment.bar, format);
-		if (segment instanceof ContextSegment) return StatusLine.#renderContextWindow(context, segment.thresholds, segment.bar);
+		if (segment instanceof ContextSegment) return StatusLine.#renderContextWindow(context, cache, segment);
 		return null;
 	}
 
 	render(): string {
-		const { workspace, branch, model } = this.#input;
+		const { workspace, branch, model, worktree } = this.#input;
 		const { segments, timeFormat } = this.#settings;
 
 		const directory = workspace?.directory ?? null;
 		const folder = workspace?.folder ?? null;
-		const resolved = StatusLine.#resolveBranch(branch, directory);
+		const fallback = branch ?? worktree?.branch ?? null;
+		const resolved = StatusLine.#resolveBranch(fallback, directory);
 		const agent = model?.name ?? null;
 
 		const result: string[] = [];

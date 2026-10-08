@@ -11,6 +11,7 @@
 			"$type": "BranchSegment"
 		},
 		{
+			"effort": true,
 			"color": "blue",
 			"enabled": true,
 			"$type": "ModelSegment"
@@ -42,6 +43,7 @@
 			"$type": "FiveHourSegment"
 		},
 		{
+			"cache": true,
 			"thresholds": {
 				"warn": 30,
 				"alert": 10

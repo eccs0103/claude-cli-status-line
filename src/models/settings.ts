@@ -262,24 +262,29 @@ export interface ModelSegmentDiscriminator {
 
 export interface ModelSegmentScheme extends LabelSegmentScheme {
 	$type: keyof ModelSegmentDiscriminator;
+	effort: boolean;
 }
 
 export class ModelSegment extends LabelSegment {
+	@Field(Boolean, { name: "effort" })
+	effort: boolean = true;
+
 	constructor();
-	constructor(enabled: boolean, color: Color);
-	constructor(enabled?: boolean, color?: Color) {
-		if (enabled === undefined || color === undefined) {
+	constructor(enabled: boolean, color: Color, effort: boolean);
+	constructor(enabled?: boolean, color?: Color, effort?: boolean) {
+		if (enabled === undefined || color === undefined || effort === undefined) {
 			super();
 			return;
 		}
 
 		super(enabled, color);
+		this.effort = effort;
 	}
 
 	get label(): string { return "Model"; }
 
 	static get newDefault(): ModelSegment {
-		return new ModelSegment(true, Color.blue);
+		return new ModelSegment(true, Color.blue, true);
 	}
 }
 //#endregion
@@ -346,24 +351,29 @@ export interface ContextSegmentDiscriminator {
 
 export interface ContextSegmentScheme extends GaugeSegmentScheme {
 	$type: keyof ContextSegmentDiscriminator;
+	cache: boolean;
 }
 
 export class ContextSegment extends GaugeSegment {
+	@Field(Boolean, { name: "cache" })
+	cache: boolean = true;
+
 	constructor();
-	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
-	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
-		if (enabled === undefined || thresholds === undefined || bar === undefined) {
+	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar, cache: boolean);
+	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar, cache?: boolean) {
+		if (enabled === undefined || thresholds === undefined || bar === undefined || cache === undefined) {
 			super();
 			return;
 		}
 
 		super(enabled, thresholds, bar);
+		this.cache = cache;
 	}
 
 	get label(): string { return "Context"; }
 
 	static get newDefault(): ContextSegment {
-		return new ContextSegment(true, Thresholds.newDefault, Bar.newDefault);
+		return new ContextSegment(true, Thresholds.newDefault, Bar.newDefault, true);
 	}
 }
 //#endregion
@@ -391,6 +401,14 @@ export class Settings extends Model {
 		super();
 		this.segments = segments;
 		this.timeFormat = timeFormat;
+	}
+
+	get model(): ModelSegment | null {
+		return this.segments.find(segment => segment instanceof ModelSegment) ?? null;
+	}
+
+	get context(): ContextSegment | null {
+		return this.segments.find(segment => segment instanceof ContextSegment) ?? null;
 	}
 
 	get labels(): LabelSegment[] {

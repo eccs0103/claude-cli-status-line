@@ -12,6 +12,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 	#service: SettingsService;
 	#menuSettings: SingleSelectionMenu<Menu> = new SingleSelectionMenu();
 	#menuEnableSegments: MultiSelectionMenu<Segment> = new MultiSelectionMenu();
+	#menuDetails: MultiSelectionMenu<Segment> = new MultiSelectionMenu();
 	#menuColors: SingleSelectionMenu<LabelSegment> = new SingleSelectionMenu();
 	#menuColorPick: SingleSelectionMenu<Color, LabelSegment> = new SingleSelectionMenu();
 	#menuThresholds: SingleSelectionMenu<string> = new SingleSelectionMenu();
@@ -50,12 +51,13 @@ export class ConfigurationController extends Controller<[boolean]> {
 
 	#buildSettings(settings: Settings): void {
 		const menuSettings = this.#menuSettings;
-		const { segments } = settings;
+		const { segments, model, context } = settings;
 
 		const hasLabels = settings.labels.length > 0;
 		const hasGauges = settings.gauges.length > 0;
 		menuSettings.title = "Settings";
 		menuSettings.atCase("Enable segments", this.#menuEnableSegments);
+		if (model !== null || context !== null) menuSettings.atCase("Details", this.#menuDetails);
 		if (segments.length > 1) menuSettings.atCase("Order segments", this.#buildOrder(settings, null));
 		if (hasLabels) menuSettings.atCase("Colors", this.#menuColors);
 		if (hasGauges) menuSettings.atCase("Thresholds", this.#menuThresholds);
@@ -79,6 +81,21 @@ export class ConfigurationController extends Controller<[boolean]> {
 			for (const segment of segments) {
 				segment.enabled = set.has(segment);
 			}
+			return Transition.back;
+		});
+	}
+
+	#buildDetails(settings: Settings): void {
+		const menuDetails = this.#menuDetails;
+		const { model, context } = settings;
+
+		menuDetails.title = "Details";
+		if (model !== null) menuDetails.atCase("Model · effort", model, model.effort);
+		if (context !== null) menuDetails.atCase("Context · prompt cache", context, context.cache);
+		menuDetails.onContinue((chosen) => {
+			const set = new Set(chosen);
+			if (model !== null) model.effort = set.has(model);
+			if (context !== null) context.cache = set.has(context);
 			return Transition.back;
 		});
 	}
@@ -285,6 +302,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 
 		this.#buildSettings(settings);
 		this.#buildEnableSegments(settings);
+		this.#buildDetails(settings);
 		this.#buildColors(settings);
 		this.#buildColorPick();
 		this.#buildThresholds(settings);

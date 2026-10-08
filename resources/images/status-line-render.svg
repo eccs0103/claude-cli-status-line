@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="940" height="52">
-	<rect width="940" height="52" rx="6" fill="#1e1e1e" />
+<svg xmlns="http://www.w3.org/2000/svg" width="1025" height="52">
+	<rect width="1025" height="52" rx="6" fill="#1e1e1e" />
 	<text x="20" y="33" font-family="'Cascadia Code', 'Cascadia Mono', Consolas, 'Liberation Mono', Menlo, monospace" font-size="14" letter-spacing="0">
 		<tspan fill="#29b8db" font-weight="bold">my_project</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
@@ -9,7 +9,7 @@
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#5b5b5b"> </tspan>
 		<tspan fill="#1e1e1e"> </tspan>
-		<tspan fill="#4e8ed3">Sonnet 4.6</tspan>
+		<tspan fill="#4e8ed3">Opus 5.5 (high)⚡</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#5b5b5b"> </tspan>
 		<tspan fill="#1e1e1e"> </tspan>
@@ -17,7 +17,7 @@
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#0dbc79">62%</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
-		<tspan fill="#5b5b5b">for 1.1/7 d</tspan>
+		<tspan fill="#5b5b5b">for 1d 2h</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#5b5b5b"> </tspan>
 		<tspan fill="#1e1e1e"> </tspan>
@@ -25,7 +25,7 @@
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#cd3131">6%</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
-		<tspan fill="#5b5b5b">for 2.5/5 h</tspan>
+		<tspan fill="#5b5b5b">for 2h 30m</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#5b5b5b"> </tspan>
 		<tspan fill="#1e1e1e"> </tspan>
@@ -34,5 +34,7 @@
 		<tspan fill="#e5e510">25%</tspan>
 		<tspan fill="#1e1e1e"> </tspan>
 		<tspan fill="#5b5b5b">#</tspan>
+		<tspan fill="#1e1e1e"> </tspan>
+		<tspan fill="#5b5b5b">42m</tspan>
 	</text>
 </svg>

@@ -40,6 +40,8 @@ Directory · Branch · Model · 7-day limit · 5-hour limit · Context window
 
 Color thresholds: green (>30%), yellow (10–30%), red (≤10%).
 
+Model also shows the current reasoning effort, with `⚡` when fast mode is on (`Opus 5.5 (high)⚡`). Context also shows how long the prompt cache stays warm (`25% # 42m`), or `cold` in red when the next message will re-process the whole context. Either one can be switched off under `config` → Details.
+
 ## Configuring
 
 ```
