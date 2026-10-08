@@ -81,7 +81,7 @@ export class StatusLine {
 	static #readBranch(directory: string): string | null {
 		try {
 			const stdio: StdioOptions = ["pipe", "pipe", "pipe"];
-			return ChildProcess.execSync(`git -C "${directory.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio }).toString().insteadWhitespace(null);
+			return ChildProcess.execSync(`git -C "${directory.replace(/"/g, '\\"')}" --no-optional-locks rev-parse --abbrev-ref HEAD`, { stdio }).toString().trim().insteadEmpty(null);
 		} catch {
 			return null;
 		}

@@ -1,3 +1,6 @@
+## 1.4.1 (08.10.2026)
+- Fixed the status line breaking onto a second line after the branch name when the branch is read from `git`.
+
 ## 1.4.0 (08.10.2026)
 - The Model segment now shows the current reasoning effort, plus `⚡` when fast mode is on (e.g. `Opus 5.5 (high)⚡`).
 - The Context segment now shows how long the prompt cache stays warm (e.g. `25% # 42m`), or `cold` in red once it has expired.
