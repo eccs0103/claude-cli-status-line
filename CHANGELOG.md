@@ -1,3 +1,12 @@
+## 1.4.0 (08.10.2026)
+- The Model segment now shows the current reasoning effort, plus `⚡` when fast mode is on (e.g. `Opus 5.5 (high)⚡`).
+- The Context segment now shows how long the prompt cache stays warm (e.g. `25% # 42m`), or `cold` in red once it has expired.
+- Added a "Details" option to `config` to switch these off: `Model · effort` and `Context · prompt cache`, saved as the `effort` and `cache` keys in `~/.claude/status-line.config.json`.
+- A malformed `~/.claude/status-line.config.json` is now reported as an error instead of being silently overwritten with the defaults.
+- The Directory segment is now hidden when Claude Code sends no working directory, instead of rendering an empty segment.
+- The npm package now includes `LICENSE` and `README.md`.
+- `adaptive-extender` upgraded from `1.0.3` to `1.1.1`.
+
 ## 1.3.2 (02.07.2026)
 - `adaptive-extender` upgraded from `0.12.0` to `1.0.3`.
 - License changed from MIT to Apache-2.0.

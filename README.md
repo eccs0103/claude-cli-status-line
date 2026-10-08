@@ -48,4 +48,4 @@ Model also shows the current reasoning effort, with `⚡` when fast mode is on (
 claude-cli-status-line config
 ```
 
-Lets you toggle segments, reorder them, change colors, adjust thresholds, customize the progress bar, choose the countdown time format, and reset to defaults. Settings are saved to `~/.claude/status-line.config.json`.
+Lets you toggle segments, reorder them, switch the Model effort and Context prompt-cache details, change colors, adjust thresholds, customize the progress bar, choose the countdown time format, and reset to defaults. Settings are saved to `~/.claude/status-line.config.json`.
