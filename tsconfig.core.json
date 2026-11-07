@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"lib": [ "ES2025", "ESNext.Array", "ESNext.Collection", "ESNext.Decorators" ],
+		"types": [ ]
+	},
+	"include": [
+		"src/models/settings.ts",
+		"src/models/status-line-input.ts",
+		"src/view/color-system.ts"
+	]
+}

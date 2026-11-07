@@ -31,7 +31,7 @@ export class SettingsService {
 			return Settings.import(JSON.parse(raw), "settings");
 		} catch (reason) {
 			if (!SettingsService.#isMissing(reason)) throw Error.from(reason);
-			const settings = Settings.newDefault;
+			const settings = new Settings();
 			await this.write(settings);
 			return settings;
 		}

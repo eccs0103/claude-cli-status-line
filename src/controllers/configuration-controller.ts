@@ -278,7 +278,7 @@ export class ConfigurationController extends Controller<[boolean]> {
 		menuReset.atCase("Keep current", false);
 		menuReset.onContinue(async (reset) => {
 			if (!reset) return Transition.back;
-			await this.#service.write(Settings.newDefault);
+			await this.#service.write(new Settings());
 			return Transition.success("Reset");
 		});
 	}

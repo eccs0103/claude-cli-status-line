@@ -1,7 +1,7 @@
 "use strict";
 
-import "adaptive-extender/node";
-import { Field, Model, Nullable } from "adaptive-extender/node";
+import "adaptive-extender/core";
+import { Field, Model, Nullable } from "adaptive-extender/core";
 
 const { round, trunc } = Math;
 

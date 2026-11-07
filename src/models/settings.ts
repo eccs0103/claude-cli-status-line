@@ -1,7 +1,7 @@
 "use strict";
 
-import "adaptive-extender/node";
-import { Deferred, Descendant, Enum, Field, Model } from "adaptive-extender/node";
+import "adaptive-extender/core";
+import { Deferred, Descendant, Enum, Field, Model } from "adaptive-extender/core";
 
 const { round } = Math;
 
@@ -30,27 +30,10 @@ export interface ThresholdsScheme {
 
 export class Thresholds extends Model {
 	@Field(Number, { name: "warn" })
-	warn: number;
+	warn: number = 30;
 
 	@Field(Number, { name: "alert" })
-	alert: number;
-
-	constructor();
-	constructor(warn: number, alert: number);
-	constructor(warn?: number, alert?: number) {
-		if (warn === undefined || alert === undefined) {
-			super();
-			return;
-		}
-
-		super();
-		this.warn = warn;
-		this.alert = alert;
-	}
-
-	static get newDefault(): Thresholds {
-		return new Thresholds(30, 10);
-	}
+	alert: number = 10;
 
 	color(available: number): Color {
 		if (available <= this.alert) return Color.red;
@@ -68,31 +51,13 @@ export interface BarScheme {
 
 export class Bar extends Model {
 	@Field(Number, { name: "width" })
-	width: number;
+	width: number = 10;
 
 	@Field(String, { name: "filled" })
-	filled: string;
+	filled: string = "█";
 
 	@Field(String, { name: "empty" })
-	empty: string;
-
-	constructor();
-	constructor(width: number, filled: string, empty: string);
-	constructor(width?: number, filled?: string, empty?: string) {
-		if (width === undefined || filled === undefined || empty === undefined) {
-			super();
-			return;
-		}
-
-		super();
-		this.width = width;
-		this.filled = filled;
-		this.empty = empty;
-	}
-
-	static get newDefault(): Bar {
-		return new Bar(10, "█", "░");
-	}
+	empty: string = "░";
 
 	draw(percent: number): string {
 		const { width } = this;
@@ -119,20 +84,11 @@ export interface SegmentScheme {
 @Descendant(Deferred(_ => ContextSegment))
 export abstract class Segment extends Model {
 	@Field(Boolean, { name: "enabled" })
-	enabled: boolean;
+	enabled: boolean = true;
 
-	constructor();
-	constructor(enabled: boolean);
-	constructor(enabled?: boolean) {
+	constructor() {
 		if (new.target === Segment) throw new TypeError("Unable to create an instance of an abstract class");
-
-		if (enabled === undefined) {
-			super();
-			return;
-		}
-
 		super();
-		this.enabled = enabled;
 	}
 
 	abstract get label(): string;
@@ -152,16 +108,11 @@ export abstract class LabelSegment extends Segment {
 	color: Color;
 
 	constructor();
-	constructor(enabled: boolean, color: Color);
-	constructor(enabled?: boolean, color?: Color) {
+	constructor(color: Color);
+	constructor(color?: Color) {
 		if (new.target === LabelSegment) throw new TypeError("Unable to create an instance of an abstract class");
-
-		if (enabled === undefined || color === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled);
+		super();
+		if (color === undefined) return;
 		this.color = color;
 	}
 }
@@ -177,24 +128,14 @@ export interface GaugeSegmentScheme extends SegmentScheme {
 @Descendant(Deferred(_ => ContextSegment))
 export abstract class GaugeSegment extends Segment {
 	@Field(Thresholds, { name: "thresholds" })
-	thresholds: Thresholds;
+	thresholds: Thresholds = new Thresholds();
 
 	@Field(Bar, { name: "bar" })
-	bar: Bar;
+	bar: Bar = new Bar();
 
-	constructor();
-	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
-	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
+	constructor() {
 		if (new.target === GaugeSegment) throw new TypeError("Unable to create an instance of an abstract class");
-
-		if (enabled === undefined || thresholds === undefined || bar === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled);
-		this.thresholds = thresholds;
-		this.bar = bar;
+		super();
 	}
 }
 //#endregion
@@ -209,22 +150,11 @@ export interface DirectorySegmentScheme extends LabelSegmentScheme {
 }
 
 export class DirectorySegment extends LabelSegment {
-	constructor();
-	constructor(enabled: boolean, color: Color);
-	constructor(enabled?: boolean, color?: Color) {
-		if (enabled === undefined || color === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, color);
+	constructor() {
+		super(Color.cyan);
 	}
 
 	get label(): string { return "Directory"; }
-
-	static get newDefault(): DirectorySegment {
-		return new DirectorySegment(true, Color.cyan);
-	}
 }
 //#endregion
 //#region Branch segment
@@ -237,22 +167,11 @@ export interface BranchSegmentScheme extends LabelSegmentScheme {
 }
 
 export class BranchSegment extends LabelSegment {
-	constructor();
-	constructor(enabled: boolean, color: Color);
-	constructor(enabled?: boolean, color?: Color) {
-		if (enabled === undefined || color === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, color);
+	constructor() {
+		super(Color.magenta);
 	}
 
 	get label(): string { return "Branch"; }
-
-	static get newDefault(): BranchSegment {
-		return new BranchSegment(true, Color.magenta);
-	}
 }
 //#endregion
 //#region Model segment
@@ -269,23 +188,11 @@ export class ModelSegment extends LabelSegment {
 	@Field(Boolean, { name: "effort" })
 	effort: boolean = true;
 
-	constructor();
-	constructor(enabled: boolean, color: Color, effort: boolean);
-	constructor(enabled?: boolean, color?: Color, effort?: boolean) {
-		if (enabled === undefined || color === undefined || effort === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, color);
-		this.effort = effort;
+	constructor() {
+		super(Color.blue);
 	}
 
 	get label(): string { return "Model"; }
-
-	static get newDefault(): ModelSegment {
-		return new ModelSegment(true, Color.blue, true);
-	}
 }
 //#endregion
 //#region Seven day segment
@@ -298,22 +205,7 @@ export interface SevenDaySegmentScheme extends GaugeSegmentScheme {
 }
 
 export class SevenDaySegment extends GaugeSegment {
-	constructor();
-	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
-	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
-		if (enabled === undefined || thresholds === undefined || bar === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, thresholds, bar);
-	}
-
 	get label(): string { return "7-day limit"; }
-
-	static get newDefault(): SevenDaySegment {
-		return new SevenDaySegment(true, Thresholds.newDefault, Bar.newDefault);
-	}
 }
 //#endregion
 //#region Five hour segment
@@ -326,22 +218,7 @@ export interface FiveHourSegmentScheme extends GaugeSegmentScheme {
 }
 
 export class FiveHourSegment extends GaugeSegment {
-	constructor();
-	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar);
-	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar) {
-		if (enabled === undefined || thresholds === undefined || bar === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, thresholds, bar);
-	}
-
 	get label(): string { return "5-hour limit"; }
-
-	static get newDefault(): FiveHourSegment {
-		return new FiveHourSegment(true, Thresholds.newDefault, Bar.newDefault);
-	}
 }
 //#endregion
 //#region Context segment
@@ -358,23 +235,7 @@ export class ContextSegment extends GaugeSegment {
 	@Field(Boolean, { name: "cache" })
 	cache: boolean = true;
 
-	constructor();
-	constructor(enabled: boolean, thresholds: Thresholds, bar: Bar, cache: boolean);
-	constructor(enabled?: boolean, thresholds?: Thresholds, bar?: Bar, cache?: boolean) {
-		if (enabled === undefined || thresholds === undefined || bar === undefined || cache === undefined) {
-			super();
-			return;
-		}
-
-		super(enabled, thresholds, bar);
-		this.cache = cache;
-	}
-
 	get label(): string { return "Context"; }
-
-	static get newDefault(): ContextSegment {
-		return new ContextSegment(true, Thresholds.newDefault, Bar.newDefault, true);
-	}
 }
 //#endregion
 
@@ -385,23 +246,10 @@ export interface SettingsScheme {
 
 export class Settings extends Model {
 	@Field(Array.Of(Segment), { name: "segments" })
-	segments: Segment[];
+	segments: Segment[] = [new DirectorySegment(), new BranchSegment(), new ModelSegment(), new SevenDaySegment(), new FiveHourSegment(), new ContextSegment()];
 
 	@Field(Enum.Of(TimeFormat), { name: "time_format" })
-	timeFormat: TimeFormat = TimeFormat.fractional;
-
-	constructor();
-	constructor(segments: Segment[], timeFormat: TimeFormat);
-	constructor(segments?: Segment[], timeFormat?: TimeFormat) {
-		if (segments === undefined || timeFormat === undefined) {
-			super();
-			return;
-		}
-
-		super();
-		this.segments = segments;
-		this.timeFormat = timeFormat;
-	}
+	timeFormat: TimeFormat = TimeFormat.clock;
 
 	get model(): ModelSegment | null {
 		return this.segments.find(segment => segment instanceof ModelSegment) ?? null;
@@ -426,10 +274,6 @@ export class Settings extends Model {
 		if (index < 0 || index2 < 0) throw new ReferenceError("Segment is not part of the settings");
 		segments[index] = segment2;
 		segments[index2] = segment;
-	}
-
-	static get newDefault(): Settings {
-		return new Settings([DirectorySegment.newDefault, BranchSegment.newDefault, ModelSegment.newDefault, SevenDaySegment.newDefault, FiveHourSegment.newDefault, ContextSegment.newDefault], TimeFormat.clock);
 	}
 }
 //#endregion

@@ -1,15 +1,14 @@
 "use strict";
 
-import "adaptive-extender/node";
+import "adaptive-extender/core";
 import { Color } from "../models/settings.js";
 
-//#region Style
+//#region Color system
 export enum Style {
 	bold = "bold",
 	dim = "dim",
 }
-//#endregion
-//#region Color system
+
 export abstract class ColorSystem {
 	static #reset: string = "\x1b[0m";
 

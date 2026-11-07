@@ -1,3 +1,8 @@
+## 1.4.2 (07.11.2026)
+- The package is now one bundled file (`dist/index.js`) with no runtime dependencies to install.
+- A config file that lacks some settings now fills each missing one with its default instead of failing to load.
+- A config file without `time_format` now shows times as `clock`, the same default a new config gets (before, such files showed `fractional`).
+
 ## 1.4.1 (08.10.2026)
 - Fixed the status line breaking onto a second line after the branch name when the branch is read from `git`.
 

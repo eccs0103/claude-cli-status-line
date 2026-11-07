@@ -1,0 +1,15 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"lib": [ "ES2025", "ESNext.Decorators" ],
+		"types": [ "node" ]
+	},
+	"include": [
+		"vite.config.ts",
+		"environment/**/*.ts",
+		"src/index.ts",
+		"src/controllers/**/*.ts",
+		"src/services/**/*.ts",
+		"src/view/status-line.ts"
+	]
+}
